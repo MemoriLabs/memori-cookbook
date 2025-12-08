@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: customer_support_db
+    environment:
+      POSTGRES_DB: customer_support
+      POSTGRES_USER: do_user
+      POSTGRES_PASSWORD: do_user_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U do_user -d customer_support"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - customer_support_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: customer_support_api
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: customer_support
+      POSTGRES_USER: do_user
+      POSTGRES_PASSWORD: do_user_password
+      DATABASE_URL: postgresql+psycopg://do_user:do_user_password@postgres:5432/customer_support
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./static:/app/static
+    networks:
+      - customer_support_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  customer_support_network:
+    driver: bridge
