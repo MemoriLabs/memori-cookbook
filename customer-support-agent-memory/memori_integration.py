@@ -13,11 +13,12 @@ Key Features:
 """
 
 import os
-from typing import Optional, Dict, Any
+from typing import Any
+
+from memori import Memori
+from openai import OpenAI
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from openai import OpenAI
-from memori import Memori
 
 
 class MemoriIntegration:
@@ -25,9 +26,9 @@ class MemoriIntegration:
 
     def __init__(
         self,
-        database_url: Optional[str] = None,
-        agent_endpoint: Optional[str] = None,
-        agent_access_key: Optional[str] = None,
+        database_url: str | None = None,
+        agent_endpoint: str | None = None,
+        agent_access_key: str | None = None,
     ):
         """
         Initialize Memori integration with database and DigitalOcean Gradient AI agent.
@@ -52,11 +53,11 @@ class MemoriIntegration:
         self.agent_access_key = agent_access_key
 
         # Track current attribution to avoid resetting per message
-        self._current_user_id: Optional[str] = None
-        self._current_process_id: Optional[str] = None
+        self._current_user_id: str | None = None
+        self._current_process_id: str | None = None
 
         # Cache registered OpenAI clients per endpoint to maintain memory continuity
-        self._registered_clients: Dict[str, OpenAI] = {}
+        self._registered_clients: dict[str, OpenAI] = {}
 
         # Note: OpenAI client will be created per-request with agent-specific credentials
         # Initialize Memori with database connection only
@@ -69,7 +70,7 @@ class MemoriIntegration:
         except Exception as e:
             print(f"WARNING: Memori schema initialization: {e}")
 
-    def set_context(self, user_id: str, domain_id: Optional[str] = None):
+    def set_context(self, user_id: str, domain_id: str | None = None):
         """
         Set the attribution context for conversations.
 
@@ -101,11 +102,11 @@ class MemoriIntegration:
         self,
         question: str,
         user_id: str,
-        domain_id: Optional[str] = None,
-        agent_url: Optional[str] = None,
-        agent_access_key: Optional[str] = None,
-        system_prompt: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        domain_id: str | None = None,
+        agent_url: str | None = None,
+        agent_access_key: str | None = None,
+        system_prompt: str | None = None,
+    ) -> dict[str, Any]:
         """
         Send a message and get a response with automatic memory integration.
 
@@ -180,8 +181,8 @@ class MemoriIntegration:
             return {"success": False, "error": error_msg}
 
     def recall_facts(
-        self, query: str, user_id: str, domain_id: Optional[str] = None, limit: int = 5
-    ) -> Dict[str, Any]:
+        self, query: str, user_id: str, domain_id: str | None = None, limit: int = 5
+    ) -> dict[str, Any]:
         """
         Search for relevant facts from conversation history.
 
@@ -236,13 +237,13 @@ class MemoriIntegration:
 
 
 # Singleton instance for global access
-_memori_instance: Optional[MemoriIntegration] = None
+_memori_instance: MemoriIntegration | None = None
 
 
 def get_memori_instance(
-    database_url: Optional[str] = None,
-    agent_endpoint: Optional[str] = None,
-    agent_access_key: Optional[str] = None,
+    database_url: str | None = None,
+    agent_endpoint: str | None = None,
+    agent_access_key: str | None = None,
 ) -> MemoriIntegration:
     """
     Get or create the global Memori integration instance.

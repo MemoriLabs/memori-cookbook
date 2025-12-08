@@ -280,7 +280,7 @@ Manual website scraping (admin only).
 ```
 1. User Question (via Widget)
    "How do I install the product?"
-   
+
 2. Domain & Session Lookup
    ├─ X-Domain-ID header → registered_domains table
    ├─ Extract domain_info: {domain_name, api_key}
@@ -403,7 +403,7 @@ CREATE TABLE conversation_history (
 ### 1. Domain-Based Agent Lookup
 **Problem**: URL variations (www vs non-www, different subdomains) caused duplicate agents.
 
-**Solution**: 
+**Solution**:
 - Store normalized `domain_name` in `registered_domains` table
 - Generate `website_key` from registered `domain_name`, not client URL
 - Normalize `website_url` as `https://{domain_name}`

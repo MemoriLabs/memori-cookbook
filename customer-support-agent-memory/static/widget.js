@@ -1,10 +1,10 @@
 /**
  * Customer Support AI Chat Widget
- * 
+ *
  * This script creates an embeddable chat widget that can be int                <!-- Chat Window -->
                 <div id="chat-window" style="display: none; width: 350px; height: 500px; min-width: 300px; min-height: 400px; max-width: 800px; max-height: 80vh; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); position: absolute; ${config.position.includes('right') ? 'right: 0;' : 'left: 0;'} bottom: 80px; flex-direction: column; overflow: hidden;")rated into any website
  * to provide AI-powered customer support using the backend API.
- * 
+ *
  * Usage:
  * 1. Include this script in your HTML: <script src="https://your-api-domain.com/widget.js"></script>
  * 2. Initialize the widget: CustomerSupportWidget.init({ apiUrl: 'https://your-api-domain.com' });
@@ -168,25 +168,25 @@
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
                 }
-                
+
                 #customer-support-widget #chat-button:hover {
                     transform: scale(1.05);
                 }
-                
+
                 #customer-support-widget .message {
                     margin-bottom: 8px;
                     word-wrap: break-word;
                     font-size: 14px;
                     line-height: 1.4;
                 }
-                
+
                 #customer-support-widget .user-message {
                     background: ${config.primaryColor} !important;
                     color: white !important;
                     align-self: flex-end !important;
                     max-width: 80% !important;
                 }
-                
+
                 #customer-support-widget .bot-message {
                     background: ${config.secondaryColor} !important;
                     color: ${config.textColor} !important;
@@ -274,7 +274,7 @@
 
         document.body.insertAdjacentHTML('beforeend', widgetHTML);
         widget = document.getElementById('customer-support-widget');
-        
+
         // Attach event listeners
         attachEventListeners();
     }
@@ -293,10 +293,10 @@
         newSessionButton.addEventListener('click', handleNewSession);
         resizeToggleButton.addEventListener('click', toggleWidgetSize);
         sendButton.addEventListener('click', sendMessage);
-        
+
         // Auto-resize textarea
         messageInput.addEventListener('input', autoResizeTextarea);
-        
+
         messageInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -354,14 +354,14 @@
     // Handle new session button click
     async function handleNewSession() {
         if (isLoading) return; // Don't allow new session while loading
-        
+
         // Clear stored session to start fresh
         clearStoredSessionId();
-        
+
         // Clear messages container
         const messagesContainer = document.getElementById('messages-container');
         messagesContainer.innerHTML = '';
-        
+
         // Start new session
         console.log('User clicked new session button');
         await startSession();
@@ -371,34 +371,34 @@
     function autoResizeTextarea() {
         const textarea = document.getElementById('message-input');
         if (!textarea) return;
-        
+
         // Reset height to calculate new height
         textarea.style.height = 'auto';
-        
+
         // Calculate new height based on scroll height
         const newHeight = Math.min(textarea.scrollHeight, 120); // Max height 120px
         const minHeight = 20; // Min height 20px
-        
+
         textarea.style.height = Math.max(newHeight, minHeight) + 'px';
     }
 
     // Toggle widget size between default and expanded
     function toggleWidgetSize() {
         if (isLoading) return; // Don't allow resize while loading
-        
+
         const chatWindow = document.getElementById('chat-window');
         const resizeToggleButton = document.getElementById('resize-toggle-button');
-        
+
         if (!chatWindow || !resizeToggleButton) return;
-        
+
         isExpanded = !isExpanded;
-        
+
         const targetSize = isExpanded ? widgetSizes.expanded : widgetSizes.default;
-        
+
         // Apply new size
         chatWindow.style.width = targetSize.width;
         chatWindow.style.height = targetSize.height;
-        
+
         // Update button icon based on state
         const icon = resizeToggleButton.querySelector('svg');
         if (isExpanded) {
@@ -406,11 +406,11 @@
             icon.innerHTML = '<path d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zm-6 10H4v-6h2v4h4v2zm6 0v-2h4v-4h2v6h-6z"/>';
             resizeToggleButton.title = 'Shrink widget';
         } else {
-            // Icon for "expand" state  
+            // Icon for "expand" state
             icon.innerHTML = '<path d="M10 10H8v4h4v-2h-2v-2zm4 4h2v-4h-4v2h2v2zm-4-8h2V4h4v2h2V4h-2V2h-4v2H8v2h2v2zm8 8v2h2v-2h-2zm0 4v2h-2v-2h2zm-4 0v2h-2v-2h2z"/>';
             resizeToggleButton.title = 'Expand widget';
         }
-        
+
         console.log(`Widget ${isExpanded ? 'expanded' : 'shrunk'} to ${targetSize.width} x ${targetSize.height}`);
     }
 
@@ -437,7 +437,7 @@
 
             const data = await response.json();
             console.log('Loaded conversation data:', data);
-            
+
             // Clear existing messages except welcome message
             const messagesContainer = document.getElementById('messages-container');
             messagesContainer.innerHTML = '';
@@ -468,7 +468,7 @@
     function addMessageToHistory(text, sender) {
         const messagesContainer = document.getElementById('messages-container');
         const messageDiv = document.createElement('div');
-        
+
         messageDiv.className = `message ${sender}-message`;
         messageDiv.style.cssText = `
             padding: 12px;
@@ -509,7 +509,7 @@
         try {
             console.log('Starting new session for user:', getUserId());
             const websiteUrl = config.autoScrape ? window.location.origin : null;
-            
+
             const response = await fetch(`${config.apiUrl}/session`, {
                 method: 'POST',
                 headers: getAuthHeaders(),
@@ -551,7 +551,7 @@
         // Add user message to chat
         addMessage(message, 'user');
         messageInput.value = '';
-        
+
         // Reset textarea height
         autoResizeTextarea();
 
@@ -577,7 +577,7 @@
                 if (response.status === 503) {
                     // Agent is still deploying
                     const errorData = await response.json().catch(() => ({}));
-                    const deploymentMessage = errorData.detail || 
+                    const deploymentMessage = errorData.detail ||
                         "🚀 Our AI assistant is getting ready for you! This usually takes just 1-2 minutes. Please try asking your question again in a moment.";
                     addMessage(deploymentMessage, 'bot');
                     return; // Don't throw, just show the message
@@ -599,7 +599,7 @@
     // Add message to chat (for new messages with scrolling)
     function addMessage(text, sender) {
         addMessageToHistory(text, sender);
-        
+
         // Scroll to bottom for new messages
         const messagesContainer = document.getElementById('messages-container');
         setTimeout(() => {
@@ -623,7 +623,7 @@
         const sendButton = document.getElementById('send-button');
         const newSessionButton = document.getElementById('new-session-button');
         const resizeToggleButton = document.getElementById('resize-toggle-button');
-        
+
         if (loading) {
             loadingIndicator.style.display = 'block';
             sendButton.disabled = true;
@@ -694,7 +694,7 @@
         init: async function(userConfig = {}) {
             // Merge user config with defaults
             config = Object.assign(config, userConfig);
-            
+
             // Validate configuration
             if (!validateConfig()) {
                 console.error('CustomerSupportWidget initialization failed due to invalid configuration');
@@ -712,7 +712,7 @@
             } else {
                 createWidget();
             }
-            
+
             return true;
         },
 

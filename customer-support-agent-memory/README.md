@@ -11,7 +11,7 @@ A powerful, embeddable AI customer support solution that can be integrated into 
 
 - 🤖 **AI-Powered Support**: Uses DigitalOcean's Gradient AI platform for contextual understanding
 - 🧠 **Persistent Memory with Memori**: Direct database integration for conversation memory, automatic fact extraction, and semantic search
-- 🕷️ **Knowledge Base Management**: File uploads, text content, and URL scraping for context-aware responses  
+- 🕷️ **Knowledge Base Management**: File uploads, text content, and URL scraping for context-aware responses
 - 💾 **Persistent Storage**: Agents and knowledge bases stored in PostgreSQL with automatic synchronization
 - 🚀 **Easy Integration**: Single JavaScript snippet for any website
 - 🐳 **Docker Ready**: Complete containerized setup with docker-compose
@@ -355,32 +355,32 @@ Check stored resources:
 
 ```sql
 -- View all registered domains
-SELECT id, domain_name, created_at 
-FROM registered_domains 
+SELECT id, domain_name, created_at
+FROM registered_domains
 ORDER BY created_at DESC;
 
 -- View all agents with their domains
-SELECT a.website_key, a.agent_uuid, a.website_url, a.agent_access_key IS NOT NULL as has_key, a.created_at 
+SELECT a.website_key, a.agent_uuid, a.website_url, a.agent_access_key IS NOT NULL as has_key, a.created_at
 FROM agents a
 ORDER BY a.created_at DESC;
 
 -- View all knowledge bases
-SELECT website_key, kb_uuid, website_url, kb_name 
-FROM knowledge_bases 
+SELECT website_key, kb_uuid, website_url, kb_name
+FROM knowledge_bases
 ORDER BY created_at DESC;
 
 -- Count resources
-SELECT 
+SELECT
     (SELECT COUNT(*) FROM registered_domains) as total_domains,
     (SELECT COUNT(*) FROM agents) as total_agents,
     (SELECT COUNT(*) FROM knowledge_bases) as total_kbs,
     (SELECT COUNT(*) FROM user_sessions WHERE status = 'active') as active_sessions;
 
 -- Check agent access keys
-SELECT website_key, 
-       agent_uuid, 
+SELECT website_key,
+       agent_uuid,
        LENGTH(agent_access_key) as key_length,
-       agent_access_key IS NOT NULL as has_key 
+       agent_access_key IS NOT NULL as has_key
 FROM agents;
 ```
 

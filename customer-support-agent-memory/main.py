@@ -9,34 +9,32 @@ Run: `pip install -r requirements.txt` to install dependencies
 Then: `uvicorn main_gradient:app --reload` to start the server
 """
 
-from typing import Dict, List, Optional, Any
-import os
-import uuid
 import asyncio
 import hashlib
-from datetime import datetime, timedelta
+import os
+import uuid
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
+from datetime import datetime
+from typing import Any
 
+import asyncpg
+import httpx
+import validators
+from digitalocean_client import DigitalOceanGradientClient
+from dotenv import load_dotenv
 from fastapi import (
-    FastAPI,
-    HTTPException,
-    Header,
-    UploadFile,
-    File,
     BackgroundTasks,
+    FastAPI,
+    Header,
+    HTTPException,
+    UploadFile,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPBearer
-from pydantic import BaseModel
-import asyncpg
-import validators
-import httpx
-
-from digitalocean_client import DigitalOceanGradientClient
+from fastapi.staticfiles import StaticFiles
 from memori_integration import get_memori_instance
+from pydantic import BaseModel
 
 # Load environment variables
 load_dotenv()
@@ -49,33 +47,33 @@ load_dotenv()
 
 class ScrapeWebsiteRequest(BaseModel):
     website_url: str
-    depth: Optional[int] = 2
-    max_pages: Optional[int] = 20
+    depth: int | None = 2
+    max_pages: int | None = 20
 
 
 class QueryRequest(BaseModel):
     question: str
     session_id: str
     user_id: str = "anonymous"
-    website_context: Optional[str] = None
+    website_context: str | None = None
 
 
 class QueryResponse(BaseModel):
     answer: str
-    sources: List[str] = []
+    sources: list[str] = []
     session_id: str
 
 
 class SessionRequest(BaseModel):
     user_id: str = "anonymous"
-    website_url: Optional[str] = None
+    website_url: str | None = None
 
 
 class SessionResponse(BaseModel):
     session_id: str
     user_id: str
     created_at: str
-    website_url: Optional[str] = None
+    website_url: str | None = None
 
 
 class SessionInfo(BaseModel):
@@ -83,10 +81,10 @@ class SessionInfo(BaseModel):
     user_id: str
     created_at: datetime
     last_activity: datetime
-    website_url: Optional[str] = None
-    agent_uuid: Optional[str] = None
-    agent_url: Optional[str] = None
-    knowledge_base_uuids: List[str] = []
+    website_url: str | None = None
+    agent_uuid: str | None = None
+    agent_url: str | None = None
+    knowledge_base_uuids: list[str] = []
 
 
 class WebsiteScrapingResponse(BaseModel):
@@ -97,29 +95,29 @@ class WebsiteScrapingResponse(BaseModel):
 
 
 class FileUploadRequest(BaseModel):
-    chunk_size: Optional[int] = 1000
-    use_semantic: Optional[bool] = False
-    custom_name: Optional[str] = None
+    chunk_size: int | None = 1000
+    use_semantic: bool | None = False
+    custom_name: str | None = None
 
 
 class TextUploadRequest(BaseModel):
     text_content: str
     document_name: str
-    chunk_size: Optional[int] = 1000
-    use_semantic: Optional[bool] = False
+    chunk_size: int | None = 1000
+    use_semantic: bool | None = False
 
 
 class URLUploadRequest(BaseModel):
     url_to_scrape: str
-    max_depth: Optional[int] = 2
-    max_links: Optional[int] = 20
-    chunk_size: Optional[int] = 1000
+    max_depth: int | None = 2
+    max_links: int | None = 20
+    chunk_size: int | None = 1000
 
 
 class KnowledgeUploadResponse(BaseModel):
     success: bool
     message: str
-    details: Optional[dict] = None
+    details: dict | None = None
 
 
 class DomainRegistrationRequest(BaseModel):
@@ -138,7 +136,7 @@ class ConversationMessage(BaseModel):
 class ConversationHistoryResponse(BaseModel):
     session_id: str
     user_id: str
-    messages: List[ConversationMessage]
+    messages: list[ConversationMessage]
     total_messages: int
 
 
@@ -147,15 +145,15 @@ class ConversationHistoryResponse(BaseModel):
 # ============================================================================
 
 # Store agent info by website_key (one agent per website)
-agents: Dict[
-    str, Dict[str, Any]
+agents: dict[
+    str, dict[str, Any]
 ] = {}  # website_key -> {agent_uuid, agent_url, kb_uuids, created_at}
 
 # Store session info
-sessions: Dict[str, SessionInfo] = {}
+sessions: dict[str, SessionInfo] = {}
 
 # Store knowledge base UUID by website
-knowledge_bases: Dict[str, str] = {}  # website_key -> kb_uuid
+knowledge_bases: dict[str, str] = {}  # website_key -> kb_uuid
 
 
 # ============================================================================
@@ -219,8 +217,8 @@ async def save_session_to_db(session_info: SessionInfo) -> bool:
                 """
                 INSERT INTO user_sessions (session_id, user_id, website_url, created_at, last_activity, status)
                 VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (session_id) 
-                DO UPDATE SET 
+                ON CONFLICT (session_id)
+                DO UPDATE SET
                     user_id = EXCLUDED.user_id,
                     website_url = EXCLUDED.website_url,
                     last_activity = EXCLUDED.last_activity,
@@ -241,7 +239,7 @@ async def save_session_to_db(session_info: SessionInfo) -> bool:
         return False
 
 
-async def load_session_from_db(session_id: str) -> Optional[SessionInfo]:
+async def load_session_from_db(session_id: str) -> SessionInfo | None:
     """Load session from database"""
     try:
         conn = await get_db_connection()
@@ -277,7 +275,7 @@ async def save_conversation_to_db(
     user_id: str,
     role: str,
     content: str,
-    message_id: Optional[str] = None,
+    message_id: str | None = None,
 ) -> bool:
     """Save conversation message to database"""
     try:
@@ -308,7 +306,7 @@ async def save_conversation_to_db(
         return False
 
 
-async def save_agent_to_db(website_key: str, agent_info: Dict[str, Any]) -> bool:
+async def save_agent_to_db(website_key: str, agent_info: dict[str, Any]) -> bool:
     """Save agent information to database"""
     try:
         conn = await get_db_connection()
@@ -317,11 +315,11 @@ async def save_agent_to_db(website_key: str, agent_info: Dict[str, Any]) -> bool
         try:
             await conn.execute(
                 """
-                INSERT INTO agents (website_key, agent_uuid, agent_url, agent_access_key, 
+                INSERT INTO agents (website_key, agent_uuid, agent_url, agent_access_key,
                                    website_url, knowledge_base_uuids, deployment_status, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                ON CONFLICT (website_key) 
-                DO UPDATE SET 
+                ON CONFLICT (website_key)
+                DO UPDATE SET
                     agent_uuid = EXCLUDED.agent_uuid,
                     agent_url = EXCLUDED.agent_url,
                     agent_access_key = EXCLUDED.agent_access_key,
@@ -348,7 +346,7 @@ async def save_agent_to_db(website_key: str, agent_info: Dict[str, Any]) -> bool
         return False
 
 
-async def load_agent_from_db(website_key: str) -> Optional[Dict[str, Any]]:
+async def load_agent_from_db(website_key: str) -> dict[str, Any] | None:
     """Load agent information from database"""
     try:
         conn = await get_db_connection()
@@ -357,7 +355,7 @@ async def load_agent_from_db(website_key: str) -> Optional[Dict[str, Any]]:
         try:
             row = await conn.fetchrow(
                 """
-                SELECT website_key, agent_uuid, agent_url, agent_access_key, 
+                SELECT website_key, agent_uuid, agent_url, agent_access_key,
                        website_url, knowledge_base_uuids, deployment_status, created_at, updated_at
                 FROM agents
                 WHERE website_key = $1
@@ -384,7 +382,7 @@ async def load_agent_from_db(website_key: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-async def load_all_agents_from_db() -> Dict[str, Dict[str, Any]]:
+async def load_all_agents_from_db() -> dict[str, dict[str, Any]]:
     """Load all agents from database into memory"""
     try:
         conn = await get_db_connection()
@@ -393,7 +391,7 @@ async def load_all_agents_from_db() -> Dict[str, Dict[str, Any]]:
         try:
             rows = await conn.fetch(
                 """
-                SELECT website_key, agent_uuid, agent_url, agent_access_key, 
+                SELECT website_key, agent_uuid, agent_url, agent_access_key,
                        website_url, knowledge_base_uuids, deployment_status, created_at
                 FROM agents
             """
@@ -421,7 +419,7 @@ async def load_all_agents_from_db() -> Dict[str, Dict[str, Any]]:
         return {}
 
 
-async def get_reusable_database_id() -> Optional[str]:
+async def get_reusable_database_id() -> str | None:
     """Get the reusable database ID from config table"""
     try:
         conn = await get_db_connection()
@@ -456,8 +454,8 @@ async def save_reusable_database_id(database_id: str) -> bool:
                 """
                 INSERT INTO digitalocean_config (config_key, config_value, updated_at)
                 VALUES ('database_id', $1, $2)
-                ON CONFLICT (config_key) 
-                DO UPDATE SET 
+                ON CONFLICT (config_key)
+                DO UPDATE SET
                     config_value = EXCLUDED.config_value,
                     updated_at = EXCLUDED.updated_at
             """,
@@ -476,8 +474,8 @@ async def save_knowledge_base_to_db(
     website_key: str,
     kb_uuid: str,
     website_url: str,
-    kb_name: Optional[str] = None,
-    database_id: Optional[str] = None,
+    kb_name: str | None = None,
+    database_id: str | None = None,
 ) -> bool:
     """Save knowledge base information to database"""
     try:
@@ -489,8 +487,8 @@ async def save_knowledge_base_to_db(
                 """
                 INSERT INTO knowledge_bases (website_key, kb_uuid, website_url, kb_name, database_id, created_at, updated_at)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
-                ON CONFLICT (website_key) 
-                DO UPDATE SET 
+                ON CONFLICT (website_key)
+                DO UPDATE SET
                     kb_uuid = EXCLUDED.kb_uuid,
                     website_url = EXCLUDED.website_url,
                     kb_name = EXCLUDED.kb_name,
@@ -513,7 +511,7 @@ async def save_knowledge_base_to_db(
         return False
 
 
-async def load_knowledge_base_from_db(website_key: str) -> Optional[str]:
+async def load_knowledge_base_from_db(website_key: str) -> str | None:
     """Load knowledge base UUID from database"""
     try:
         conn = await get_db_connection()
@@ -538,7 +536,7 @@ async def load_knowledge_base_from_db(website_key: str) -> Optional[str]:
         return None
 
 
-async def load_all_knowledge_bases_from_db() -> Dict[str, str]:
+async def load_all_knowledge_bases_from_db() -> dict[str, str]:
     """Load all knowledge bases from database into memory"""
     try:
         conn = await get_db_connection()
@@ -645,7 +643,7 @@ async def setup_knowledge_base(website_url: str) -> str:
 async def create_agent(
     website_url: str,
     wait_for_deployment: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Create a customer support agent for a website using DigitalOcean Gradient AI
 
@@ -739,7 +737,7 @@ Note: This agent serves multiple users and sessions. User-specific context is ma
 
     # Wait for deployment if requested
     if wait_for_deployment and not agent_url:
-        print(f"DEBUG: Waiting for agent deployment to complete...")
+        print("DEBUG: Waiting for agent deployment to complete...")
         try:
             deployed_agent = await client.wait_for_agent_deployment(
                 agent["uuid"], max_wait_seconds=30, poll_interval=5
@@ -790,7 +788,7 @@ Note: This agent serves multiple users and sessions. User-specific context is ma
     return agent_info
 
 
-async def check_and_update_agent_url(agent_info: Dict[str, Any]) -> Dict[str, Any]:
+async def check_and_update_agent_url(agent_info: dict[str, Any]) -> dict[str, Any]:
     """
     Check if agent has a deployment URL, if not try to fetch it
 
@@ -974,9 +972,9 @@ async def poll_agent_deployment_background(
 
 
 async def get_or_create_agent(
-    website_url: Optional[str] = None,
-    domain_api_key: Optional[str] = None,
-) -> Dict[str, Any]:
+    website_url: str | None = None,
+    domain_api_key: str | None = None,
+) -> dict[str, Any]:
     """
     Get existing agent or create new one for a website
 
@@ -1029,7 +1027,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize Memori
     try:
-        memori = get_memori_instance()
+        get_memori_instance()
         print("✓ Memori initialized successfully")
     except Exception as e:
         print(f"✗ Memori initialization failed: {e}")
@@ -1107,7 +1105,7 @@ async def root():
     """Serve demo HTML page"""
     html_file = "static/demo.html"
     if os.path.exists(html_file):
-        with open(html_file, "r") as f:
+        with open(html_file) as f:
             return f.read()
     return "<h1>Customer Support AI Agent (DigitalOcean Gradient AI)</h1><p>API is running. Use /docs for API documentation.</p>"
 
@@ -1118,7 +1116,7 @@ async def health_check():
     db_status = await test_db_connection()
 
     try:
-        client = DigitalOceanGradientClient()
+        DigitalOceanGradientClient()
         do_status = "ok"
     except Exception as e:
         do_status = f"error: {str(e)}"
@@ -1166,7 +1164,7 @@ async def create_session(request: SessionRequest):
 @app.post("/ask", response_model=QueryResponse)
 async def ask(
     request: QueryRequest,
-    x_domain_id: Optional[str] = Header(None, alias="X-Domain-ID"),
+    x_domain_id: str | None = Header(None, alias="X-Domain-ID"),
 ):
     """
     Ask the AI agent a question using DigitalOcean's chat completions API
@@ -1325,16 +1323,16 @@ async def ask(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process question with AI agent: {str(e)}",
-        )
+        ) from e
 
 
 @app.post("/knowledge/upload/file", response_model=KnowledgeUploadResponse)
 async def upload_file_to_knowledge(
-    file: UploadFile = File(...),
+    file: UploadFile,
     chunk_size: int = 1000,
     use_semantic: bool = False,
-    custom_name: Optional[str] = None,
-    x_domain_id: Optional[str] = Header(None, alias="X-Domain-ID"),
+    custom_name: str | None = None,
+    x_domain_id: str | None = Header(None, alias="X-Domain-ID"),
 ):
     """
     Upload a document (PDF, TXT, MD, JSON, CSV) to the knowledge base via DigitalOcean.
@@ -1406,7 +1404,7 @@ async def upload_file_to_knowledge(
             )
 
         # Upload file to presigned URL
-        print(f"DEBUG: Uploading file to presigned URL")
+        print("DEBUG: Uploading file to presigned URL")
         async with httpx.AsyncClient(timeout=60.0) as upload_client:
             upload_response = await upload_client.put(
                 presigned_url,
@@ -1418,7 +1416,7 @@ async def upload_file_to_knowledge(
             upload_response.raise_for_status()
 
         # Add file data source to knowledge base
-        print(f"DEBUG: Adding file data source to knowledge base")
+        print("DEBUG: Adding file data source to knowledge base")
         data_source = await client.add_file_data_source(
             knowledge_base_uuid=kb_uuid,
             stored_object_key=stored_object_key,
@@ -1426,7 +1424,7 @@ async def upload_file_to_knowledge(
         )
 
         # Start indexing job
-        print(f"DEBUG: Starting indexing job for uploaded file")
+        print("DEBUG: Starting indexing job for uploaded file")
         job = await client.start_indexing_job(kb_uuid)
 
         return KnowledgeUploadResponse(
@@ -1465,7 +1463,7 @@ async def upload_file_to_knowledge(
 @app.post("/knowledge/upload/text", response_model=KnowledgeUploadResponse)
 async def upload_text_to_knowledge(
     request: TextUploadRequest,
-    x_domain_id: Optional[str] = Header(None, alias="X-Domain-ID"),
+    x_domain_id: str | None = Header(None, alias="X-Domain-ID"),
 ):
     """
     Upload plain text content to the knowledge base via DigitalOcean.
@@ -1533,7 +1531,7 @@ async def upload_text_to_knowledge(
             )
 
         # Upload text to presigned URL
-        print(f"DEBUG: Uploading text to presigned URL")
+        print("DEBUG: Uploading text to presigned URL")
         async with httpx.AsyncClient(timeout=60.0) as upload_client:
             upload_response = await upload_client.put(
                 presigned_url,
@@ -1543,7 +1541,7 @@ async def upload_text_to_knowledge(
             upload_response.raise_for_status()
 
         # Add file data source to knowledge base
-        print(f"DEBUG: Adding text data source to knowledge base")
+        print("DEBUG: Adding text data source to knowledge base")
         data_source = await client.add_file_data_source(
             knowledge_base_uuid=kb_uuid,
             stored_object_key=stored_object_key,
@@ -1551,7 +1549,7 @@ async def upload_text_to_knowledge(
         )
 
         # Start indexing job
-        print(f"DEBUG: Starting indexing job for uploaded text")
+        print("DEBUG: Starting indexing job for uploaded text")
         job = await client.start_indexing_job(kb_uuid)
 
         return KnowledgeUploadResponse(
@@ -1590,7 +1588,7 @@ async def upload_text_to_knowledge(
 @app.post("/knowledge/upload/url", response_model=KnowledgeUploadResponse)
 async def upload_url_to_knowledge(
     request: URLUploadRequest,
-    x_domain_id: Optional[str] = Header(None, alias="X-Domain-ID"),
+    x_domain_id: str | None = Header(None, alias="X-Domain-ID"),
 ):
     """
     Scrape and upload content from a URL to the knowledge base via DigitalOcean web crawler.
@@ -1644,7 +1642,7 @@ async def upload_url_to_knowledge(
         )
 
         # Start indexing job
-        print(f"DEBUG: Starting indexing job for URL")
+        print("DEBUG: Starting indexing job for URL")
         job = await client.start_indexing_job(kb_uuid)
         job_uuid = job["uuid"]
 
@@ -1807,7 +1805,7 @@ async def get_conversation_history(session_id: str):
         print(f"ERROR: Failed to get conversation history: {e}")
         raise HTTPException(
             status_code=500, detail="Failed to retrieve conversation history"
-        )
+        ) from e
 
 
 @app.post("/register-domain")
@@ -1837,7 +1835,7 @@ async def register_domain(
             raise HTTPException(
                 status_code=400,
                 detail=f"Invalid domain_name: {str(e)}",
-            )
+            ) from e
 
         conn = await get_db_connection()
         if conn is None:
@@ -1951,7 +1949,7 @@ async def register_domain(
         print(f"ERROR: Failed to register domain: {e}")
         raise HTTPException(
             status_code=500, detail=f"Error registering domain: {str(e)}"
-        )
+        ) from e
 
 
 @app.get("/knowledge-bases")

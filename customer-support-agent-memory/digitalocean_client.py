@@ -3,10 +3,11 @@ DigitalOcean Gradient AI Platform API Client
 Provides functions to interact with DigitalOcean Gradient AI API endpoints
 """
 
-import os
-import httpx
-from typing import Dict, List, Optional, Any
 import logging
+import os
+from typing import Any
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -37,10 +38,10 @@ class DigitalOceanGradientClient:
         self,
         name: str,
         base_url: str,
-        database_id: Optional[str] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        database_id: str | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Create a knowledge base on DigitalOcean with initial web crawler datasource
 
@@ -121,7 +122,7 @@ class DigitalOceanGradientClient:
         url: str,
         max_pages: int = 100,
         max_depth: int = 3,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Add a web crawler data source to a knowledge base
 
@@ -157,8 +158,8 @@ class DigitalOceanGradientClient:
             return result.get("knowledge_base_data_source", {})
 
     async def start_indexing_job(
-        self, knowledge_base_uuid: str, data_source_uuids: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, knowledge_base_uuid: str, data_source_uuids: list[str] | None = None
+    ) -> dict[str, Any]:
         """
         Start an indexing job for a knowledge base
 
@@ -184,7 +185,7 @@ class DigitalOceanGradientClient:
             logger.info(f"Started indexing job: {result.get('job', {}).get('uuid')}")
             return result.get("job", {})
 
-    async def get_indexing_job_status(self, job_uuid: str) -> Dict[str, Any]:
+    async def get_indexing_job_status(self, job_uuid: str) -> dict[str, Any]:
         """
         Get the status of an indexing job
 
@@ -206,13 +207,13 @@ class DigitalOceanGradientClient:
         self,
         name: str,
         instruction: str,
-        knowledge_base_uuids: Optional[List[str]] = None,
-        description: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        knowledge_base_uuids: list[str] | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
         provide_citations: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create an agent on DigitalOcean Gradient AI Platform
 
@@ -287,7 +288,7 @@ class DigitalOceanGradientClient:
             )
             return agent
 
-    async def get_agent(self, agent_uuid: str) -> Dict[str, Any]:
+    async def get_agent(self, agent_uuid: str) -> dict[str, Any]:
         """
         Retrieve an existing agent
 
@@ -307,7 +308,7 @@ class DigitalOceanGradientClient:
 
     async def wait_for_agent_deployment(
         self, agent_uuid: str, max_wait_seconds: int = 30, poll_interval: int = 5
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Wait for an agent deployment to complete
 
@@ -364,11 +365,11 @@ class DigitalOceanGradientClient:
     async def update_agent(
         self,
         agent_uuid: str,
-        instruction: Optional[str] = None,
-        name: Optional[str] = None,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        instruction: str | None = None,
+        name: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> dict[str, Any]:
         """
         Update an existing agent
 
@@ -405,7 +406,7 @@ class DigitalOceanGradientClient:
 
     async def create_agent_access_key(
         self, agent_uuid: str, key_name: str = "default-key"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create an access key for an agent endpoint
 
@@ -432,7 +433,7 @@ class DigitalOceanGradientClient:
 
     async def attach_knowledge_base(
         self, agent_uuid: str, knowledge_base_uuid: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Attach a knowledge base to an agent
 
@@ -455,7 +456,7 @@ class DigitalOceanGradientClient:
             result = response.json()
             return result.get("agent", {})
 
-    async def list_knowledge_bases(self) -> List[Dict[str, Any]]:
+    async def list_knowledge_bases(self) -> list[dict[str, Any]]:
         """
         List all knowledge bases
 
@@ -470,7 +471,7 @@ class DigitalOceanGradientClient:
             result = response.json()
             return result.get("knowledge_bases", [])
 
-    async def list_agents(self) -> List[Dict[str, Any]]:
+    async def list_agents(self) -> list[dict[str, Any]]:
         """
         List all agents
 
@@ -483,7 +484,7 @@ class DigitalOceanGradientClient:
             result = response.json()
             return result.get("agents", [])
 
-    async def delete_agent(self, agent_uuid: str) -> Dict[str, Any]:
+    async def delete_agent(self, agent_uuid: str) -> dict[str, Any]:
         """
         Delete an agent
 
@@ -500,7 +501,7 @@ class DigitalOceanGradientClient:
             response.raise_for_status()
             return response.json()
 
-    async def delete_knowledge_base(self, knowledge_base_uuid: str) -> Dict[str, Any]:
+    async def delete_knowledge_base(self, knowledge_base_uuid: str) -> dict[str, Any]:
         """
         Delete a knowledge base
 
@@ -523,7 +524,7 @@ class DigitalOceanGradientClient:
         knowledge_base_uuid: str,
         filename: str,
         content_type: str = "application/octet-stream",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get a presigned URL for file upload
 
@@ -557,7 +558,7 @@ class DigitalOceanGradientClient:
         knowledge_base_uuid: str,
         stored_object_key: str,
         filename: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Add a file data source to knowledge base after upload
 

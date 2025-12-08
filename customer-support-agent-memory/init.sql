@@ -6,7 +6,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create database user if not exists
-DO $$ 
+DO $$
 BEGIN
    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'do_user') THEN
       CREATE ROLE do_user WITH LOGIN PASSWORD 'do_user_password';
@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_last_activity ON user_sessions(last
 CREATE TABLE IF NOT EXISTS registered_domains (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     domain_name TEXT NOT NULL UNIQUE,
-    
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -102,7 +102,7 @@ CREATE TABLE IF NOT EXISTS digitalocean_config (
 );
 
 -- Insert default database_id entry (will be populated on first KB creation)
-INSERT INTO digitalocean_config (config_key, config_value) 
+INSERT INTO digitalocean_config (config_key, config_value)
 VALUES ('database_id', '')
 ON CONFLICT (config_key) DO NOTHING;
 

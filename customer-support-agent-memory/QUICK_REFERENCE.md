@@ -345,21 +345,21 @@ All agents and knowledge bases are automatically saved to PostgreSQL:
 
 **Check stored agents:**
 ```sql
-SELECT website_key, agent_uuid, website_url, created_at 
-FROM agents 
+SELECT website_key, agent_uuid, website_url, created_at
+FROM agents
 ORDER BY created_at DESC;
 ```
 
 **Check stored knowledge bases:**
 ```sql
-SELECT website_key, kb_uuid, website_url, kb_name 
-FROM knowledge_bases 
+SELECT website_key, kb_uuid, website_url, kb_name
+FROM knowledge_bases
 ORDER BY created_at DESC;
 ```
 
 **Count resources:**
 ```sql
-SELECT 
+SELECT
     (SELECT COUNT(*) FROM agents) as total_agents,
     (SELECT COUNT(*) FROM knowledge_bases) as total_kbs,
     (SELECT COUNT(*) FROM user_sessions WHERE status = 'active') as active_sessions;
@@ -479,7 +479,7 @@ class KnowledgeClient:
     def __init__(self, api_url, domain_id):
         self.api_url = api_url
         self.headers = {"X-Domain-ID": domain_id}
-    
+
     def upload_file(self, file_path, chunk_size=1000):
         with open(file_path, 'rb') as f:
             files = {'file': f}
@@ -493,7 +493,7 @@ class KnowledgeClient:
                 data=data
             )
             return response.json()
-    
+
     def upload_text(self, text_content, document_name):
         response = requests.post(
             f"{self.api_url}/knowledge/upload/text",

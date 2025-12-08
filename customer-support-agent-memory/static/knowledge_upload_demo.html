@@ -285,7 +285,7 @@
             const config = getConfig();
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
-            
+
             if (!file) {
                 showResult('fileResult', false, 'Please select a file');
                 return;
@@ -311,7 +311,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showResult('fileResult', true, `✓ ${data.message}`);
                     fileInput.value = '';
@@ -359,7 +359,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showResult('textResult', true, `✓ ${data.message}`);
                     document.getElementById('textContent').value = '';
@@ -388,7 +388,7 @@
 
             try {
                 showResult('urlResult', true, 'Scraping URL... This may take a while...');
-                
+
                 const response = await fetch(`${config.apiUrl}/knowledge/upload/url`, {
                     method: 'POST',
                     headers: {
@@ -404,7 +404,7 @@
                 });
 
                 const data = await response.json();
-                
+
                 if (data.success) {
                     showResult('urlResult', true, `✓ ${data.message}`);
                 } else {
