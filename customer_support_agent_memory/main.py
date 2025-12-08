@@ -20,7 +20,6 @@ from typing import Any
 import asyncpg
 import httpx
 import validators
-from digitalocean_client import DigitalOceanGradientClient
 from dotenv import load_dotenv
 from fastapi import (
     BackgroundTasks,
@@ -33,8 +32,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
-from memori_integration import get_memori_instance
 from pydantic import BaseModel
+
+from customer_support_agent_memory.digitalocean_client import DigitalOceanGradientClient
+from customer_support_agent_memory.memori_integration import get_memori_instance
 
 # Load environment variables
 load_dotenv()
@@ -1001,7 +1002,7 @@ async def get_or_create_agent(
 
     # Create new agent for this website
     print(f"DEBUG: Creating new agent for website {website_url}")
-    agent_info = await create_agent(website_url or "general", domain_api_key)
+    agent_info = await create_agent(website_url or "general")
 
     # Store agent info in memory
     agents[website_key] = agent_info
@@ -1083,7 +1084,7 @@ app = FastAPI(
 
 # CORS middleware
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore[arg-type]
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -1391,7 +1392,7 @@ async def upload_file_to_knowledge(
         print("DEBUG: Requesting presigned URL for file upload")
         presigned_response = await client.create_presigned_url_for_file(
             knowledge_base_uuid=kb_uuid,
-            filename=file.filename,
+            filename=file.filename or "unnamed_file",
             content_type=file.content_type or "application/octet-stream",
         )
 
@@ -1420,7 +1421,7 @@ async def upload_file_to_knowledge(
         data_source = await client.add_file_data_source(
             knowledge_base_uuid=kb_uuid,
             stored_object_key=stored_object_key,
-            filename=custom_name or file.filename,
+            filename=custom_name or file.filename or "unnamed_file",
         )
 
         # Start indexing job
@@ -1448,7 +1449,7 @@ async def upload_file_to_knowledge(
             content=KnowledgeUploadResponse(
                 success=False,
                 message=f"DigitalOcean API error: {e.response.status_code}",
-            ).dict(),
+            ).model_dump(),
         )
     except Exception as e:
         print(f"ERROR: Failed to upload file: {e}")
@@ -1456,7 +1457,7 @@ async def upload_file_to_knowledge(
             status_code=500,
             content=KnowledgeUploadResponse(
                 success=False, message=f"Error uploading file: {str(e)}"
-            ).dict(),
+            ).model_dump(),
         )
 
 
@@ -1573,7 +1574,7 @@ async def upload_text_to_knowledge(
             content=KnowledgeUploadResponse(
                 success=False,
                 message=f"DigitalOcean API error: {e.response.status_code}",
-            ).dict(),
+            ).model_dump(),
         )
     except Exception as e:
         print(f"ERROR: Failed to upload text: {e}")
@@ -1581,7 +1582,7 @@ async def upload_text_to_knowledge(
             status_code=500,
             content=KnowledgeUploadResponse(
                 success=False, message=f"Error uploading text: {str(e)}"
-            ).dict(),
+            ).model_dump(),
         )
 
 
@@ -1637,8 +1638,8 @@ async def upload_url_to_knowledge(
         data_source = await client.add_web_crawler_data_source(
             knowledge_base_uuid=kb_uuid,
             url=request.url_to_scrape,
-            max_pages=request.max_links,
-            max_depth=request.max_depth,
+            max_pages=request.max_links or 100,
+            max_depth=request.max_depth or 3,
         )
 
         # Start indexing job
@@ -1664,7 +1665,7 @@ async def upload_url_to_knowledge(
                     status_code=500,
                     content=KnowledgeUploadResponse(
                         success=False, message="Indexing job failed"
-                    ).dict(),
+                    ).model_dump(),
                 )
 
             await asyncio.sleep(5)
@@ -1692,7 +1693,7 @@ async def upload_url_to_knowledge(
             content=KnowledgeUploadResponse(
                 success=False,
                 message=f"DigitalOcean API error: {e.response.status_code}",
-            ).dict(),
+            ).model_dump(),
         )
     except Exception as e:
         print(f"ERROR: Failed to upload URL: {e}")
@@ -1700,7 +1701,7 @@ async def upload_url_to_knowledge(
             status_code=500,
             content=KnowledgeUploadResponse(
                 success=False, message=f"Error uploading URL: {str(e)}"
-            ).dict(),
+            ).model_dump(),
         )
 
 
@@ -1975,7 +1976,7 @@ async def list_agents():
                 "website_url": info.get("website_url"),
                 "agent_url": info.get("agent_url"),
                 "has_access_key": bool(info.get("agent_access_key")),
-                "created_at": info.get("created_at").isoformat()
+                "created_at": info["created_at"].isoformat()
                 if info.get("created_at")
                 else None,
                 "knowledge_base_uuids": info.get("knowledge_base_uuids", []),

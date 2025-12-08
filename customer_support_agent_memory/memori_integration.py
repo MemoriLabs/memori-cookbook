@@ -65,7 +65,8 @@ class MemoriIntegration:
 
         # Build database schema (idempotent - safe to call multiple times)
         try:
-            self.mem.config.storage.build()
+            if self.mem.config.storage:
+                self.mem.config.storage.build()
             print("INFO: Memori database schema initialized successfully")
         except Exception as e:
             print(f"WARNING: Memori schema initialization: {e}")

@@ -16,3 +16,20 @@ repos:
   - id: ruff
     args: [--fix]
   - id: ruff-format
+
+- repo: local
+  hooks:
+  - id: ty
+    name: ty type checker
+    entry: uvx ty check
+    language: system
+    types: [python]
+    pass_filenames: false
+    always_run: true
+
+  - id: pytest
+    name: pytest
+    entry: bash -c 'uv run pytest || [ $? -eq 5 ]'
+    language: system
+    pass_filenames: false
+    always_run: true
