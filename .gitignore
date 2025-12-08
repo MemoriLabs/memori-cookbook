@@ -52,3 +52,9 @@ tests/examples/*
 
 # Integration test files (contain credentials/connection strings)
 tests/llm/clients/oss/openai/async_integration.py
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Reference folder (for development only)
+Memori/

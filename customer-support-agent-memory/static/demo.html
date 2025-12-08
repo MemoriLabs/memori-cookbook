@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Support Widget Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 24px;
+        }
+        .code-block {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+            font-size: 14px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .section {
+            margin: 32px 0;
+            padding: 24px;
+            border: 1px solid #e1e4e8;
+            border-radius: 8px;
+        }
+        .controls {
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Customer Support Widget Demo</h1>
+        
+        <p>This is a demonstration page showing how the customer support widget works. The widget should appear as a floating chat button in the bottom-right corner.</p>
+
+        <div class="section">
+            <h3>How to integrate the widget into your website:</h3>
+            
+            <p><strong>Quick integration:</strong> include one script tag and provide the <code>domain_id</code> your backend issued via a data attribute.</p>
+            <div class="code-block">
+&lt;script src="https://customer-support-chat-o73m4.ondigitalocean.app/static/widget.js" data-domain-id="123"&gt;&lt;/script&gt;
+            </div>
+
+            <h4>How to get your <code>domain_id</code></h4>
+            <ol>
+                <li>Open the API docs: <a href="https://customer-support-chat-o73m4.ondigitalocean.app/docs" target="_blank">/docs (Swagger)</a></li>
+                <li>Click the <strong>Authorize</strong> button in the top-right of the docs UI and paste your domain API key (from the register-domain response). This will add the Authorization header to the requests made from the docs UI.</li>
+                <li>Find the <code>POST /register-domain</code> endpoint in the docs (under domain registration).</li>
+                <li>Call the endpoint with a JSON body like: <code>{ "domain_name": "memori.gibsonai.com" }</code>. Use your site hostname (no scheme/path).</li>
+                <li>The endpoint will return JSON containing <code>domain_id</code>. Copy that value and use it in the widget script tag's <code>data-domain-id</code>.</li>
+            </ol>
+
+            <p>Optional customization via data attributes:</p>
+            <div class="code-block">
+&lt;script
+data-api-url="https://customer-support-chat-o73m4.ondigitalocean.app"   &lt;!-- backend API URL (optional if different) --&gt;
+data-primary-color="#28a745"        &lt;!-- main widget color --&gt;
+data-widget-title="Help & Support"  &lt;!-- title in header --&gt;
+data-position="bottom-left"         &lt;!-- bottom-right, bottom-left, top-right, top-left --&gt;
+data-auto-scrape="true" &gt;&lt;/script&gt;
+            </div>
+
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 16px; margin: 16px 0;">
+                <strong>⚠️ Important:</strong> You must provide a valid <code>domain_id</code> for the widget to work.
+                Without a valid <code>domain_id</code>, API requests will return 401 Unauthorized errors.
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Widget Controls (Demo):</h3>
+            <div class="controls">
+                <button class="button" onclick="CustomerSupportWidget.open()">Open Chat</button>
+                <button class="button" onclick="CustomerSupportWidget.close()">Close Chat</button>
+                <button class="button" onclick="CustomerSupportWidget.sendMessage('Hello! I need help with your services.')">Send Test Message</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Configuration Options:</h3>
+            <ul>
+                <li><strong>domain_id</strong>: The identifier issued to your site by the registration endpoint (required for authentication)</li>
+                <li><strong>position</strong>: 'bottom-right', 'bottom-left', 'top-right', 'top-left'</li>
+                <li><strong>primaryColor</strong>: Main color for the widget</li>
+                <li><strong>secondaryColor</strong>: Background color for bot messages</li>
+                <li><strong>widgetTitle</strong>: Title shown in the chat header</li>
+                <li><strong>welcomeMessage</strong>: First message displayed to users</li>
+                <li><strong>autoScrape</strong>: Automatically scrape current website content</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>Authentication:</h3>
+            <p>This customer support widget requires authentication using a server-issued <code>domain_id</code>. Here's what you need to know:</p>
+            <ul>
+                <li><strong>Required:</strong> You must provide a <code>domain_id</code> assigned to your site.</li>
+                <li><strong>Security:</strong> The widget sends the <code>X-Domain-ID</code> header with requests. The server verifies the <code>domain_id</code> against the registered domains table; the widget never sends secret API keys from the browser.</li>
+                <li><strong>Validation:</strong> The domain is validated on the server during each request when necessary.</li>
+                <li><strong>Error Handling:</strong> Invalid or missing <code>domain_id</code> will cause authentication errors (401/400).</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>How it works:</h3>
+            <ol>
+                <li>The widget uses the provided <code>domain_id</code> to identify the site when making requests</li>
+                <li>A session is created when the chat is first opened (requires valid <code>domain_id</code>)</li>
+                <li>If <code>autoScrape</code> is enabled, it scrapes your website content for context (the request includes your <code>domain_id</code>)</li>
+                <li>Users can ask questions and get AI-powered responses based on your website (requires valid <code>domain_id</code>)</li>
+                <li>All conversations are remembered for personalized support</li>
+                <li>The AI agent can use website tools to fetch additional information when needed</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Include the widget script (provide the domain_id issued by your backend via data-domain-id) -->
+    <script src="/static/widget.js" data-domain-id="123"></script>
+</body>
+</html>

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Upload Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .upload-section h2 {
+            color: #495057;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            color: #495057;
+            font-weight: 500;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="file"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .supported-types {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+
+        .supported-types h3 {
+            font-size: 14px;
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .supported-types ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .supported-types li {
+            padding: 5px 0;
+            color: #6c757d;
+            font-size: 13px;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Knowledge Upload Demo</h1>
+        <p class="subtitle">Upload documents, text, or URLs to your AI knowledge base</p>
+
+        <!-- Configuration -->
+        <div class="upload-section">
+            <h2>Configuration</h2>
+            <div class="form-group">
+                <label for="apiUrl">API URL</label>
+                <input type="text" id="apiUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+            </div>
+            <div class="form-group">
+                <label for="apiKey">API Key</label>
+                <input type="text" id="apiKey" placeholder="Enter your API key">
+                <small style="color: #666; font-size: 12px;">Your registered domain will be automatically determined from your API key</small>
+            </div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="upload-section">
+            <h2>📄 Upload File (PDF, TXT, MD, JSON, CSV)</h2>
+            <div class="form-group">
+                <label for="fileInput">Select File</label>
+                <input type="file" id="fileInput" accept=".pdf,.txt,.md,.json,.csv">
+            </div>
+            <div class="form-group">
+                <label for="fileChunkSize">Chunk Size</label>
+                <input type="number" id="fileChunkSize" value="1000" min="100" max="5000">
+            </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="fileSemantic">
+                <label for="fileSemantic">Use Semantic Chunking (slower, better quality)</label>
+            </div>
+            <button onclick="uploadFile()">Upload File</button>
+            <div id="fileResult" class="result"></div>
+        </div>
+
+        <!-- Text Upload -->
+        <div class="upload-section">
+            <h2>📝 Upload Text Content</h2>
+            <div class="form-group">
+                <label for="textContent">Text Content</label>
+                <textarea id="textContent" placeholder="Enter your text content here..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="textDocName">Document Name</label>
+                <input type="text" id="textDocName" placeholder="My Document">
+            </div>
+            <div class="form-group">
+                <label for="textChunkSize">Chunk Size</label>
+                <input type="number" id="textChunkSize" value="1000" min="100" max="5000">
+            </div>
+            <button onclick="uploadText()">Upload Text</button>
+            <div id="textResult" class="result"></div>
+        </div>
+
+        <!-- URL Upload -->
+        <div class="upload-section">
+            <h2>🌐 Upload from URL</h2>
+            <div class="form-group">
+                <label for="urlToScrape">URL to Scrape</label>
+                <input type="text" id="urlToScrape" placeholder="https://docs.example.com">
+            </div>
+            <div class="form-group">
+                <label for="urlMaxDepth">Max Depth</label>
+                <input type="number" id="urlMaxDepth" value="2" min="1" max="5">
+            </div>
+            <div class="form-group">
+                <label for="urlMaxLinks">Max Links</label>
+                <input type="number" id="urlMaxLinks" value="20" min="1" max="100">
+            </div>
+            <button onclick="uploadUrl()">Scrape & Upload</button>
+            <div id="urlResult" class="result"></div>
+        </div>
+
+        <!-- Supported Types -->
+        <div class="supported-types">
+            <h3>📚 Supported File Types</h3>
+            <ul>
+                <li>📕 PDF (.pdf) - PDF documents</li>
+                <li>📝 Text (.txt) - Plain text files</li>
+                <li>📄 Markdown (.md) - Markdown documents</li>
+                <li>🔢 JSON (.json) - JSON data files</li>
+                <li>📊 CSV (.csv) - CSV data files</li>
+                <li>🌐 URL - Web content scraping</li>
+                <li>✍️ Text - Direct text input</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function getConfig() {
+            return {
+                apiUrl: document.getElementById('apiUrl').value,
+                apiKey: document.getElementById('apiKey').value
+            };
+        }
+
+        function showResult(elementId, success, message) {
+            const result = document.getElementById(elementId);
+            result.className = `result ${success ? 'success' : 'error'} show`;
+            result.textContent = message;
+        }
+
+        async function uploadFile() {
+            const config = getConfig();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showResult('fileResult', false, 'Please select a file');
+                return;
+            }
+
+            if (!config.apiKey) {
+                showResult('fileResult', false, 'Please enter your API key');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('chunk_size', document.getElementById('fileChunkSize').value);
+            formData.append('use_semantic', document.getElementById('fileSemantic').checked);
+
+            try {
+                const response = await fetch(`${config.apiUrl}/knowledge/upload/file`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.apiKey}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('fileResult', true, `✓ ${data.message}`);
+                    fileInput.value = '';
+                } else {
+                    showResult('fileResult', false, `✗ ${data.message}`);
+                }
+            } catch (error) {
+                showResult('fileResult', false, `✗ Error: ${error.message}`);
+            }
+        }
+
+        async function uploadText() {
+            const config = getConfig();
+            const textContent = document.getElementById('textContent').value;
+            const documentName = document.getElementById('textDocName').value;
+
+            if (!textContent) {
+                showResult('textResult', false, 'Please enter text content');
+                return;
+            }
+
+            if (!documentName) {
+                showResult('textResult', false, 'Please enter document name');
+                return;
+            }
+
+            if (!config.apiKey) {
+                showResult('textResult', false, 'Please enter your API key');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${config.apiUrl}/knowledge/upload/text`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text_content: textContent,
+                        document_name: documentName,
+                        chunk_size: parseInt(document.getElementById('textChunkSize').value),
+                        use_semantic: false
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('textResult', true, `✓ ${data.message}`);
+                    document.getElementById('textContent').value = '';
+                    document.getElementById('textDocName').value = '';
+                } else {
+                    showResult('textResult', false, `✗ ${data.message}`);
+                }
+            } catch (error) {
+                showResult('textResult', false, `✗ Error: ${error.message}`);
+            }
+        }
+
+        async function uploadUrl() {
+            const config = getConfig();
+            const urlToScrape = document.getElementById('urlToScrape').value;
+
+            if (!urlToScrape) {
+                showResult('urlResult', false, 'Please enter a URL to scrape');
+                return;
+            }
+
+            if (!config.apiKey) {
+                showResult('urlResult', false, 'Please enter your API key');
+                return;
+            }
+
+            try {
+                showResult('urlResult', true, 'Scraping URL... This may take a while...');
+                
+                const response = await fetch(`${config.apiUrl}/knowledge/upload/url`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${config.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url_to_scrape: urlToScrape,
+                        max_depth: parseInt(document.getElementById('urlMaxDepth').value),
+                        max_links: parseInt(document.getElementById('urlMaxLinks').value),
+                        chunk_size: 1000
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('urlResult', true, `✓ ${data.message}`);
+                } else {
+                    showResult('urlResult', false, `✗ ${data.message}`);
+                }
+            } catch (error) {
+                showResult('urlResult', false, `✗ Error: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+name: Bug Report
+description: Report a bug in an example
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: First Check
+      description: Please ensure you have done the following before submitting your issue.
+      options:
+        - label: I added a descriptive title to this issue.
+          required: true
+        - label: I searched existing issues.
+          required: true
+
+  - type: input
+    id: example
+    attributes:
+      label: Example Name
+      description: Which example are you having trouble with?
+      placeholder: e.g., quickstart, databases/postgres
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: OS / Python Version
+      description: e.g., macOS / Python 3.12, Ubuntu 22.04 / Python 3.11
+      placeholder: macOS / Python 3.12
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Please describe the bug clearly. What happened? What did you expect?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Clone the repo
+        2. Run `uv sync`
+        3. Run `uv run python main.py`
+        4. See error
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Output
+      description: Please copy and paste any error messages.
+      render: shell

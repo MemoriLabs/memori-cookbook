@@ -1,0 +1,57 @@
+name: Example Request
+description: Request a new example
+title: "[Example Request] "
+labels: ["enhancement", "example"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new example.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: First Check
+      description: Please ensure you have done the following.
+      options:
+        - label: I searched existing issues and examples.
+          required: true
+        - label: This example would be useful to others.
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Example Description
+      description: What should this example demonstrate?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What category does this example fall into?
+      options:
+        - Quickstart
+        - Database Integration
+        - LLM Provider
+        - Framework Integration
+        - Use Case
+        - Advanced
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: Why would someone want this example?
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to submit a pull request for this example.
