@@ -50,6 +50,8 @@ examples = [
     "yt-dlp",
     "exa_py",
     "agno",
+    "pymongo",
+    "langgraph>=0.2.60",
 ]
 
 [project.urls]
