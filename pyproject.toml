@@ -50,6 +50,7 @@ examples = [
     "yt-dlp",
     "exa_py",
     "agno",
+    "tavily-python>=0.3.0",
 ]
 
 [project.urls]
