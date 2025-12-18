@@ -4,9 +4,8 @@ import os
 
 import streamlit as st
 from dotenv import load_dotenv
-
-from study_coach_agent.memory_utils import MemoriManager
-from study_coach_agent.study_graph import (
+from memory_utils import MemoriManager  # type: ignore[unresolved-import]
+from study_graph import (  # type: ignore[unresolved-import]
     LearnerProfile,
     StudyLog,
     run_full_evaluation,
@@ -453,18 +452,24 @@ def main():
         )
         return
 
-    # After Memori is ready, try to restore learner profile from Memori on fresh loads
+    # After Memori is ready, try to restore learner profile from Memori on fresh loads.
+    # This lets the app remember your profile across refreshes and new runs.
     if st.session_state.learner_profile is None:
+        profile_dict: dict | None = None
         try:
             profile_dict = memori_mgr.get_latest_learner_profile()
         except Exception:
             profile_dict = None
+
         if profile_dict:
             try:
                 st.session_state.learner_profile = LearnerProfile(**profile_dict)
             except Exception:
-                # If parsing fails, ignore and require explicit profile entry.
-                pass
+                # Fall back to LLM-based reconstruction if structured load fails.
+                _maybe_restore_profile_from_memori(memori_mgr)
+        else:
+            # No structured profile found – try to reconstruct via Memori + LLM.
+            _maybe_restore_profile_from_memori(memori_mgr)
 
     tab1, tab2, tab3 = st.tabs(
         ["🧭 Study Plan", "📅 Today’s Session", "📈 Progress & Memory"]
