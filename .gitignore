@@ -34,6 +34,7 @@ env/
 # SQLite databases
 *.db
 *.db-journal
+*.sqlite
 
 # UV
 uv.lock
@@ -54,3 +55,10 @@ google-credentials.json
 
 # Reference folder (for development only)
 Memori/
+
+# Node.js / Frontend
+node_modules/
+.vite/
+dist/
+build/
+*.log
