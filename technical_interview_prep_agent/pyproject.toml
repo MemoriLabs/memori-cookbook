@@ -1,0 +1,24 @@
+[project]
+name = "technical-interview-prep-agent"
+version = "0.1.0"
+description = "Technical Interview Prep Assistant with Memori and FastAPI"
+readme = "README.md"
+requires-python = ">=3.11,<4"
+dependencies = [
+    "agno>=2.2.1",
+    "memori>=3.0.0",
+    "python-dotenv>=1.1.0",
+    "openai>=2.6.1",
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["core", "memory_utils"]
+packages = ["backend"]
