@@ -151,7 +151,7 @@ Respond using the following JSON structure:
 
     agent = Agent(
         name="Wellness Plan Generator",
-        model=OpenAIChat(**model_kwargs),
+        model=OpenAIChat(**model_kwargs),  # type: ignore[arg-type]
         markdown=False,
     )
     result = agent.run(prompt)
@@ -309,7 +309,7 @@ Respond using the following JSON structure:
 
     agent = Agent(
         name="Weekly Check-In Assessor",
-        model=OpenAIChat(**model_kwargs),
+        model=OpenAIChat(**model_kwargs),  # type: ignore[arg-type]
         markdown=False,
     )
     result = agent.run(prompt)
@@ -413,7 +413,7 @@ Respond in JSON format:
 
     agent = Agent(
         name="Correlation Analyzer",
-        model=OpenAIChat(**model_kwargs),
+        model=OpenAIChat(**model_kwargs),  # type: ignore[arg-type]
         markdown=False,
     )
     result = agent.run(prompt)

@@ -5,7 +5,7 @@ Stores daily habits, wellness plans, check-ins, and analytics data.
 
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import (
@@ -31,7 +31,7 @@ class DailyHabitLog(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(255), nullable=False, index=True)
     date = Column(DateTime, nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Sleep metrics
     sleep_hours = Column(Float, nullable=True)
@@ -103,7 +103,7 @@ class WellnessPlan(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(255), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     week_number = Column(Integer, default=1)
 
     # Plan content
@@ -123,14 +123,14 @@ class WellnessPlan(Base):
             "userId": self.user_id,
             "createdAt": self.created_at.isoformat() if self.created_at else None,
             "weekNumber": self.week_number,
-            "focusAreas": json.loads(self.focus_areas) if self.focus_areas else [],
-            "dailyGoals": json.loads(self.daily_goals) if self.daily_goals else {},
+            "focusAreas": json.loads(self.focus_areas) if self.focus_areas else [],  # type: ignore[arg-type]
+            "dailyGoals": json.loads(self.daily_goals) if self.daily_goals else {},  # type: ignore[arg-type]
             "weeklyObjectives": (
-                json.loads(self.weekly_objectives) if self.weekly_objectives else []
+                json.loads(self.weekly_objectives) if self.weekly_objectives else []  # type: ignore[arg-type]
             ),
             "planMarkdown": self.plan_markdown,
             "interventions": (
-                json.loads(self.interventions) if self.interventions else []
+                json.loads(self.interventions) if self.interventions else []  # type: ignore[arg-type]
             ),
             "isActive": self.is_active,
             "completedAt": self.completed_at.isoformat() if self.completed_at else None,
@@ -144,7 +144,7 @@ class WeeklyCheckIn(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(255), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     week_start_date = Column(DateTime, nullable=False)
 
     # Assessment results
@@ -169,13 +169,13 @@ class WeeklyCheckIn(Base):
             ),
             "assessmentMarkdown": self.assessment_markdown,
             "progressSummary": (
-                json.loads(self.progress_summary) if self.progress_summary else {}
+                json.loads(self.progress_summary) if self.progress_summary else {}  # type: ignore[arg-type]
             ),
             "correlationsFound": (
-                json.loads(self.correlations_found) if self.correlations_found else []
+                json.loads(self.correlations_found) if self.correlations_found else []  # type: ignore[arg-type]
             ),
             "recommendations": (
-                json.loads(self.recommendations) if self.recommendations else []
+                json.loads(self.recommendations) if self.recommendations else []  # type: ignore[arg-type]
             ),
             "avgSleepHours": self.avg_sleep_hours,
             "avgMoodScore": self.avg_mood_score,
@@ -191,7 +191,7 @@ class Correlation(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(255), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Correlation details
     metric1 = Column(String(100), nullable=False)  # e.g., "sleep_hours"
@@ -244,7 +244,7 @@ def init_database():
 # Analytics helpers
 def get_habit_stats(db: Session, user_id: str, days: int = 30) -> dict[str, Any]:
     """Get statistics for habits over the last N days."""
-    end_date = datetime.utcnow()
+    end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=days)
 
     logs = (
@@ -292,7 +292,7 @@ def get_habit_stats(db: Session, user_id: str, days: int = 30) -> dict[str, Any]
 
 def get_weekly_activity(db: Session, user_id: str, weeks: int = 12) -> list[dict]:
     """Get weekly habit activity for the last N weeks."""
-    end_date = datetime.utcnow()
+    end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(weeks=weeks)
 
     logs = (

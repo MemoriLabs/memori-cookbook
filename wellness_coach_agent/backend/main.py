@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from core import (
     DailyHabitEntry,
@@ -188,7 +188,7 @@ def log_habit(req: LogHabitRequest) -> dict:
     try:
         entry_date = datetime.fromisoformat(req.habitEntry.date.replace("Z", "+00:00"))
     except Exception:
-        entry_date = datetime.utcnow()
+        entry_date = datetime.now(timezone.utc)
 
     # Get profile for Memori logging
     profile_dict = mgr.get_latest_wellness_profile()
@@ -304,7 +304,7 @@ def get_today_habit(user_id: str) -> dict:
     """
     db = get_session()
     try:
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).date()
         log = (
             db.query(DailyHabitLog)
             .filter(
@@ -468,9 +468,9 @@ def conduct_checkin(req: WeeklyCheckInRequest) -> dict:
                 req.weekStartDate.replace("Z", "+00:00")
             )
         except Exception:
-            week_start = datetime.utcnow() - timedelta(days=7)
+            week_start = datetime.now(timezone.utc) - timedelta(days=7)
     else:
-        week_start = datetime.utcnow() - timedelta(days=7)
+        week_start = datetime.now(timezone.utc) - timedelta(days=7)
 
     week_end = week_start + timedelta(days=7)
 
