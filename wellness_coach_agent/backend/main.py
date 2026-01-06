@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 from core import (
@@ -118,12 +119,11 @@ def _get_memori_manager(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Wellness Coach API")
-
 
 # Initialize database tables on startup
-@app.on_event("startup")
-def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     logger.info("Starting up - initializing database...")
     try:
         init_database()
@@ -131,10 +131,15 @@ def startup_event():
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         raise
+    yield
+    # Shutdown (if needed)
+    logger.info("Shutting down...")
 
+
+app = FastAPI(title="Wellness Coach API", lifespan=lifespan)
 
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore[arg-type]
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
