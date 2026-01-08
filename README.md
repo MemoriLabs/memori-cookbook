@@ -1,5 +1,11 @@
 [![Memori Labs](https://s3.us-east-1.amazonaws.com/images.memorilabs.ai/banner.png)](https://memorilabs.ai/)
 
+A collection of examples and demos for building with [Memori](https://github.com/MemoriLabs/Memori).
+
+## Projects
+
+- [Clinical Exam Evaluator](./clinical-exam-evaluator/) - Memori powered clinical examination evaluation system
+
 <p align="center">
   <strong>Official Cookbook for the Memori Python SDK</strong>
 </p>

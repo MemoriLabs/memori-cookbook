@@ -34,7 +34,6 @@ env/
 # SQLite databases
 *.db
 *.db-journal
-*.sqlite
 
 # UV
 uv.lock
@@ -53,16 +52,3 @@ tests/examples/*
 
 # Integration test files (contain credentials/connection strings)
 tests/llm/clients/oss/openai/async_integration.py
-# Jupyter Notebooks
-.ipynb_checkpoints/
-*.ipynb_checkpoints
-
-# Reference folder (for development only)
-Memori/
-
-# Node.js / Frontend
-node_modules/
-.vite/
-dist/
-build/
-*.log
