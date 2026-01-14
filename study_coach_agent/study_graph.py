@@ -182,7 +182,7 @@ def build_verification_graph(llm_client):
       2) Show quiz & explanation prompt, collect user responses
       3) Re-run graph with answers to execute evaluate
     """
-    graph = StateGraph(VerificationState)  # type: ignore[invalid-argument-type]
+    graph = StateGraph(VerificationState)
 
     def generate_quiz(state: VerificationState) -> VerificationState:
         return _generate_quiz_node(state, llm_client)

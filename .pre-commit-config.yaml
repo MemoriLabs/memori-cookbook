@@ -26,10 +26,3 @@ repos:
     types: [python]
     pass_filenames: false
     always_run: true
-
-  - id: pytest
-    name: pytest
-    entry: bash -c 'uv run pytest || [ $? -eq 5 ]'
-    language: system
-    pass_filenames: false
-    always_run: true

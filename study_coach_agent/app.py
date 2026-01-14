@@ -4,8 +4,8 @@ import os
 
 import streamlit as st
 from dotenv import load_dotenv
-from memory_utils import MemoriManager  # type: ignore[unresolved-import]
-from study_graph import (  # type: ignore[unresolved-import]
+from memory_utils import MemoriManager
+from study_graph import (
     LearnerProfile,
     StudyLog,
     run_full_evaluation,
