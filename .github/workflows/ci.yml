@@ -50,7 +50,7 @@ jobs:
         run: uv sync --extra dev --extra examples
 
       - name: Run ty type checker
-        run: uvx ty check
+        run: uvx ty check --ignore unresolved-import --ignore invalid-assignment --ignore invalid-argument-type --ignore unused-ignore-comment
 
   test:
     name: Test

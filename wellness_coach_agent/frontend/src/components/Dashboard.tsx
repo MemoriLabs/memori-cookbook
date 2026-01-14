@@ -227,12 +227,9 @@ function Dashboard({ onBackToLanding }: Props) {
 
         {/* Notifications */}
         {!hasApiKeys && (
-          <div className="notification warning">
+          <div className="notification warning" onClick={() => setShowKeysModal(true)} style={{ cursor: 'pointer' }}>
             <span className="notification-icon">🔑</span>
-            Please set your OpenAI and Memori API keys to use the app.
-            <button className="btn-small" onClick={() => setShowKeysModal(true)} style={{ marginLeft: 'auto' }}>
-              Set API Keys
-            </button>
+            Please set your OpenAI and Memori API keys to use the app. Click here or the button above to configure.
           </div>
         )}
         {loadingInit && (
@@ -301,7 +298,7 @@ function Dashboard({ onBackToLanding }: Props) {
       {/* API Keys Modal */}
       {showKeysModal && (
         <div className="modal-overlay" onClick={() => setShowKeysModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>API Keys Configuration</h2>
               <button className="modal-close" onClick={() => setShowKeysModal(false)}>

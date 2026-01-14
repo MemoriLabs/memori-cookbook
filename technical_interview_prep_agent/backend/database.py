@@ -247,7 +247,7 @@ def get_pattern_stats(db: Session, user_id: str) -> dict[str, dict]:
     pattern_stats: dict[str, dict] = {}
 
     for attempt in attempts:
-        patterns = json.loads(attempt.patterns) if attempt.patterns else []  # type: ignore[arg-type]
+        patterns = json.loads(attempt.patterns) if attempt.patterns else []
         for pattern in patterns:
             if pattern not in pattern_stats:
                 pattern_stats[pattern] = {

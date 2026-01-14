@@ -12,8 +12,7 @@ from memori import Memori
 from openai import OpenAI
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-
-from ai_consultant_agent.workflow import CompanyProfile, run_ai_assessment
+from workflow import CompanyProfile, run_ai_assessment
 
 # Load environment variables
 load_dotenv()

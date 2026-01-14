@@ -73,7 +73,7 @@ class MemoriManager:
         )
 
         client = OpenAI(api_key=openai_key)
-        mem = Memori(conn=self.SessionLocal).llm.register(client)
+        mem = Memori(conn=self.SessionLocal).openai.register(client)
         mem.attribution(entity_id=entity_id, process_id=process_id)
         mem.config.storage.build()
 
@@ -198,9 +198,7 @@ class MemoriManager:
             return None
 
         try:
-            results: list[Any] = (
-                recall_fn("WELLNESS_PROFILE", limit=5) or []  # type: ignore[call-arg]
-            )
+            results: list[Any] = recall_fn("WELLNESS_PROFILE", limit=5) or []
         except Exception:
             return None
 

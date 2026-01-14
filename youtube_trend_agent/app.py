@@ -17,8 +17,7 @@ import os
 import streamlit as st
 from agno.agent import Agent
 from agno.models.openai import OpenAIChat
-
-from youtube_trend_agent.core import fetch_exa_trends, ingest_channel_into_memori
+from core import fetch_exa_trends, ingest_channel_into_memori
 
 
 def _load_inline_image(path: str, height_px: int) -> str:

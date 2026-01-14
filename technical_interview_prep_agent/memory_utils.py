@@ -242,9 +242,7 @@ class MemoriManager:
             return None
 
         try:
-            results: list[Any] = (
-                recall_fn("INTERVIEW_PROFILE", limit=5) or []  # type: ignore[call-arg]
-            )
+            results: list[Any] = recall_fn("INTERVIEW_PROFILE", limit=5) or []
         except Exception:
             return None
 

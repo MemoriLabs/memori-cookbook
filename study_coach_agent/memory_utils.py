@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, sessionmaker
 try:
     from pymongo import MongoClient
 except ImportError:  # pragma: no cover - optional dependency
-    MongoClient = None  # type: ignore[misc]
+    MongoClient = None
 
 
 load_dotenv()
