@@ -1,0 +1,13 @@
+# CPU-only PyTorch (much smaller, no CUDA dependencies)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+
+# Main dependencies
+agno>=2.2.1
+memori>=3.0.0
+python-dotenv>=1.1.0
+openai>=2.6.1
+sqlalchemy>=2.0.0
+pydantic>=2.0.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
