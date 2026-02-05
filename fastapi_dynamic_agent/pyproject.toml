@@ -1,5 +1,5 @@
 [project]
-name = "hosted-chatbot-agent"
+name = "FastAPI-Dynamic-Agent"
 version = "0.1.0"
 description = "Cookbook example for a hosted Memori chatbot"
 readme = "README.md"
