@@ -1,0 +1,64 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+*.so
+*.egg
+*.egg-info
+dist/
+/build/
+*.swp
+
+# Testing
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov/
+.tox
+
+# IDEs
+.DS_Store
+.idea
+.vscode
+*.swo
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+
+# SQLite databases
+*.db
+*.db-journal
+*.sqlite
+
+# UV
+uv.lock
+
+# Python packaging
+*.egg-info/
+dist/
+/build/
+
+# Sensitive files (do not commit)
+google-credentials.json
+*.pem
+*.key
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Reference folder (for development only)
+Memori/
+
+# Node.js / Frontend
+node_modules/
+.vite/
+dist/
+build/
+*.log
