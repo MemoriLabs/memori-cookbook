@@ -4,12 +4,6 @@ from pydantic import BaseModel, Field
 
 
 class AgentType(str, Enum):
-    """
-    Types of AI agents available.
-
-    Each agent has a specialized personality and knowledge base.
-    """
-
     GENERAL = "general"
     PROGRAMMING = "programming"
     CUSTOMER_SUPPORT = "customer_support"
@@ -17,10 +11,6 @@ class AgentType(str, Enum):
 
 
 class AgentTypeInfo(BaseModel):
-    """
-    Information about an agent type.
-    """
-
     type: AgentType = Field(..., description="Agent type identifier")
     name: str = Field(..., description="Human-readable name")
     description: str = Field(..., description="What this agent specializes in")
@@ -39,10 +29,6 @@ class AgentTypeInfo(BaseModel):
 
 
 class AgentTypesResponse(BaseModel):
-    """
-    Response containing all available agent types.
-    """
-
     agents: list[AgentTypeInfo] = Field(
         ..., description="List of available agent types"
     )

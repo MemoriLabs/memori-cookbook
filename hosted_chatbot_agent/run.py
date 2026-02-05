@@ -1,16 +1,3 @@
-#!/usr/bin/env python3
-"""
-Quick start script for Memori Hosted Chatbot.
-
-This script provides a convenient way to run the server with helpful
-messages and error checking.
-
-Usage:
-    python run.py
-    # or
-    ./run.py
-"""
-
 import sys
 from pathlib import Path
 

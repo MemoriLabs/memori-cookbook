@@ -4,15 +4,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """
-    Application settings.
-
-    These are loaded from environment variables or .env file.
-    For Memori hosted, we only need:
-    - OpenAI API key (for the LLM)
-    - Memori API key (for hosted memory service)
-    """
-
     # API Keys
     openai_api_key: str
     memori_api_key: str
@@ -42,11 +33,5 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """
-    Get cached settings instance.
-
-    Using lru_cache ensures we only load settings once,
-    improving performance.
-    """
     # Pydantic's BaseSettings loads from environment variables automatically
     return Settings()  # type: ignore[call-arg]

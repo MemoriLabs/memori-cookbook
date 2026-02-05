@@ -13,10 +13,4 @@ router = APIRouter()
     description="Check if the service is running and get version info",
 )
 async def health_check(settings: SettingsDep) -> HealthResponse:
-    """
-    Health check endpoint.
-
-    Returns:
-        Service status and version information
-    """
     return HealthResponse(status="healthy", version=settings.app_version)

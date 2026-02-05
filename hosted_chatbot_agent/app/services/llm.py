@@ -17,10 +17,6 @@ logger = logging.getLogger(__name__)
 
 
 class LLMService:
-    """
-    LLM service with automatic memory enhancement via Memori.
-    """
-
     def __init__(self):
         """Initialize the LLM client with Memori memory enhancement."""
         settings = get_settings()
@@ -41,24 +37,6 @@ class LLMService:
         user_name: str | None = None,
         agent_type: AgentType = AgentType.GENERAL,
     ) -> str:
-        """
-        Send a chat message and get a response with memory.
-
-        Performance note: Makes 1 OpenAI API call. Memory retrieval
-        and storage happen automatically in the background via Memori.
-
-        Args:
-            user_id: Unique identifier to isolate this user's memories
-            message: The user's message
-            user_name: Optional user name for personalization
-            agent_type: Type of agent personality to use
-
-        Returns:
-            AI response text with memory context
-
-        Raises:
-            Exception: If there's an error with the LLM or Memori service
-        """
         try:
             # Tell Memori who this conversation is for
             # This ensures memories are isolated per user
@@ -91,7 +69,6 @@ class LLMService:
             raise
 
     def close(self):
-        """Clean up resources if needed."""
         pass
 
 
@@ -100,12 +77,6 @@ _llm_service: LLMService | None = None
 
 
 def get_llm_service() -> LLMService:
-    """
-    Get the singleton LLM service instance.
-
-    Using a singleton ensures we don't create multiple Memori
-    connections unnecessarily.
-    """
     global _llm_service
     if _llm_service is None:
         _llm_service = LLMService()

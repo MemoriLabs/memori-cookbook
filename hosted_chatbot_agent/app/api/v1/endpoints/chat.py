@@ -36,31 +36,6 @@ async def chat(
     request: ChatRequest,
     llm_service: LLMServiceDep,
 ) -> ChatResponse:
-    """
-    Chat endpoint with automatic memory.
-
-    Performance: Single LLM API call per request. Memory retrieval and
-    storage happen automatically via Memori in the background with zero
-    added latency to the response.
-
-    Flow:
-    1. User sends a message with optional agent type
-    2. Memori retrieves relevant memories for this user
-    3. LLM generates response with memory context using the specified agent personality
-    4. Memori extracts and stores new memories (background)
-    5. Return response
-
-    Args:
-        user_id: Unique user identifier (used to isolate memories)
-        request: Chat request with message, optional name, and agent type
-        llm_service: LLM service with Memori integration
-
-    Returns:
-        Chat response with AI message and agent type used
-
-    Raises:
-        HTTPException: If there's an error processing the request
-    """
     try:
         # Get AI response with memory using specified agent type
         response_text = llm_service.chat(

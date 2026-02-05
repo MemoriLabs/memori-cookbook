@@ -40,17 +40,6 @@ AGENT_METADATA = {
     """,
 )
 async def get_agent_types() -> AgentTypesResponse:
-    """
-    Get all available agent types.
-
-    Returns information about each agent type including:
-    - Type identifier (for API requests)
-    - Human-readable name (for UI display)
-    - Description of specialization
-
-    Returns:
-        AgentTypesResponse with list of agents and default type
-    """
     agents = [
         AgentTypeInfo(
             type=agent_type, name=metadata["name"], description=metadata["description"]

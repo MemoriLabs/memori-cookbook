@@ -10,12 +10,6 @@ load_dotenv()
 
 
 def create_app() -> FastAPI:
-    """
-    Create and configure the FastAPI application.
-
-    Returns:
-        Configured FastAPI application instance
-    """
     settings = get_settings()
 
     # Create FastAPI app
@@ -78,9 +72,6 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    """
-    Run the server directly with: python -m app.main
-    """
     settings = get_settings()
 
     uvicorn.run(

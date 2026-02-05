@@ -1,9 +1,3 @@
-"""
-Agent system prompts.
-
-These define the personality and capabilities of each agent type.
-"""
-
 from app.models.agents import AgentType
 
 AGENT_PROMPTS = {
@@ -40,16 +34,6 @@ Note: You provide general educational information, not specific investment advic
 
 
 def get_system_prompt(agent_type: AgentType, user_name: str | None = None) -> str:
-    """
-    Get the system prompt for a specific agent type.
-
-    Args:
-        agent_type: The type of agent
-        user_name: Optional user name to personalize the prompt
-
-    Returns:
-        Complete system prompt string
-    """
     prompt = AGENT_PROMPTS[agent_type]
 
     if user_name:
