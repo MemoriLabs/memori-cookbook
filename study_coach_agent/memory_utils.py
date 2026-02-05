@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Any
+from typing import Any, cast
 
 from dotenv import load_dotenv
 from memori import Memori
@@ -192,7 +192,8 @@ class MemoriManager:
                 {"role": "user", "content": question},
             ],
         )
-        return response.choices[0].message.content
+        content = cast(str | None, response.choices[0].message.content)
+        return content or ""
 
     def get_latest_learner_profile(self) -> dict[str, Any] | None:
         """
