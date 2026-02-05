@@ -33,7 +33,10 @@ class Settings(BaseSettings):
     app_version: str = "1.0.0"
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
     )
 
 
@@ -41,5 +44,9 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """
     Get cached settings instance.
+
+    Using lru_cache ensures we only load settings once,
+    improving performance.
     """
-    return Settings()
+    # Pydantic's BaseSettings loads from environment variables automatically
+    return Settings()  # type: ignore[call-arg]
