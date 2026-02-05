@@ -15,18 +15,6 @@ class AgentTypeInfo(BaseModel):
     name: str = Field(..., description="Human-readable name")
     description: str = Field(..., description="What this agent specializes in")
 
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "type": "programming",
-                    "name": "Programming Expert",
-                    "description": "Expert programming assistant for coding, debugging, and software development",
-                }
-            ]
-        }
-    }
-
 
 class AgentTypesResponse(BaseModel):
     agents: list[AgentTypeInfo] = Field(

@@ -17,7 +17,7 @@ This cookbook example demonstrates best practices for integrating Memori with Fa
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.10+
 - [OpenAI API key](https://platform.openai.com/api-keys)
 - [Memori API key](https://app.memorilabs.ai/signup) (free!)
 

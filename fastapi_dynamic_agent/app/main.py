@@ -67,15 +67,12 @@ def create_app() -> FastAPI:
     return app
 
 
-# Create the app instance
-app = create_app()
-
-
 if __name__ == "__main__":
     settings = get_settings()
+    app = create_app()
 
     uvicorn.run(
-        "app.main:app",
+        app,
         host=settings.host,
         port=settings.port,
         reload=settings.debug,

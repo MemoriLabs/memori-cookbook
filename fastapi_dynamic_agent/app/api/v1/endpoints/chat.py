@@ -37,7 +37,6 @@ async def chat(
     llm_service: LLMServiceDep,
 ) -> ChatResponse:
     try:
-        # Get AI response with memory using specified agent type
         response_text = llm_service.chat(
             user_id=user_id,
             message=request.q,
@@ -45,14 +44,12 @@ async def chat(
             agent_type=request.agent_type,
         )
 
-        # Build and return response
         return ChatResponse(
             messages=[Message(content=response_text, role="assistant")],
             agent_type=request.agent_type,
         )
 
     except Exception as e:
-        # AGENTS.md: Raise meaningful exceptions with context
         raise HTTPException(
             status_code=500, detail=f"Error processing chat request: {str(e)}"
         ) from e

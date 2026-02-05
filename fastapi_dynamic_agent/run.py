@@ -43,7 +43,7 @@ def check_env_file():
 
 def main():
     """Run the server with helpful messages."""
-    print("🚀 Memori Hosted Chatbot Demo")
+    print("🚀 FastAPI Dynamic Agent Demo")
     print("=" * 50)
     print("")
 
@@ -73,11 +73,13 @@ def main():
     try:
         import uvicorn
         from app.core.config import get_settings
+        from app.main import create_app
 
         settings = get_settings()
+        app = create_app()
 
         uvicorn.run(
-            "app.main:app",
+            app,
             host=settings.host,
             port=settings.port,
             reload=settings.debug,
