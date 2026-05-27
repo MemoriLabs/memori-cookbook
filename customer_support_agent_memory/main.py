@@ -13,9 +13,9 @@ import asyncio
 import hashlib
 import os
 import uuid
-from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import asyncpg
@@ -36,7 +36,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 try:
-    from customer_support_agent_memory.digitalocean_client import DigitalOceanGradientClient
+    from customer_support_agent_memory.digitalocean_client import (
+        DigitalOceanGradientClient,
+    )
     from customer_support_agent_memory.memori_integration import get_memori_instance
 except ImportError:
     from digitalocean_client import DigitalOceanGradientClient  # type: ignore[no-redef]
