@@ -6,7 +6,7 @@ The agent can scrape website content via web crawler data sources and answer use
 It maintains conversation memory for personalized assistance.
 
 Run: `pip install -r requirements.txt` to install dependencies
-Then: `uvicorn main_gradient:app --reload` to start the server
+Then (from parent directory): `uvicorn customer_support_agent_memory.main:app --reload`
 """
 
 import asyncio
@@ -15,6 +15,7 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import asyncpg
@@ -34,8 +35,14 @@ from fastapi.security import HTTPBearer
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from customer_support_agent_memory.digitalocean_client import DigitalOceanGradientClient
-from customer_support_agent_memory.memori_integration import get_memori_instance
+try:
+    from customer_support_agent_memory.digitalocean_client import (
+        DigitalOceanGradientClient,
+    )
+    from customer_support_agent_memory.memori_integration import get_memori_instance
+except ImportError:
+    from digitalocean_client import DigitalOceanGradientClient  # type: ignore[no-redef]
+    from memori_integration import get_memori_instance  # type: ignore[no-redef]
 
 # Load environment variables
 load_dotenv()
@@ -1092,8 +1099,9 @@ app.add_middleware(
 )
 
 # Serve static files
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+_static_dir = Path(__file__).parent / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 
 # ============================================================================
@@ -1104,8 +1112,8 @@ if os.path.exists("static"):
 @app.get("/", response_class=HTMLResponse)
 async def root():
     """Serve demo HTML page"""
-    html_file = "static/demo.html"
-    if os.path.exists(html_file):
+    html_file = Path(__file__).parent / "static" / "demo.html"
+    if html_file.exists():
         with open(html_file) as f:
             return f.read()
     return "<h1>Customer Support AI Agent (DigitalOcean Gradient AI)</h1><p>API is running. Use /docs for API documentation.</p>"
@@ -1261,7 +1269,7 @@ async def ask(
 
     # Use Memori for conversation with automatic memory integration
     # Get domain_id for process attribution
-    domain_id = domain_info.get("domain_id", "unknown")
+    domain_id = domain_info.get("id", "unknown")
 
     try:
         # Get Memori instance

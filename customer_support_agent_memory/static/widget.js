@@ -1,8 +1,7 @@
 /**
  * Customer Support AI Chat Widget
  *
- * This script creates an embeddable chat widget that can be int                <!-- Chat Window -->
-                <div id="chat-window" style="display: none; width: 350px; height: 500px; min-width: 300px; min-height: 400px; max-width: 800px; max-height: 80vh; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); position: absolute; ${config.position.includes('right') ? 'right: 0;' : 'left: 0;'} bottom: 80px; flex-direction: column; overflow: hidden;")rated into any website
+ * This script creates an embeddable chat widget that can be integrated into any website
  * to provide AI-powered customer support using the backend API.
  *
  * Usage:
@@ -105,7 +104,7 @@
     // Create widget HTML structure
     function createWidget() {
         const widgetHTML = `
-            <div id="customer-support-widget" style="position: fixed; ${config.position.includes('right') ? 'right: 20px;' : 'left: 20px;'} ${config.position.includes('bottom') ? 'bottom: 20px;' : 'top: 20px;'} z-index: 9999; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div id="customer-support-widget" style="position: fixed; ${config.position.includes('right') ? 'right: 20px;' : 'left: 20px;'} ${config.position.includes('bottom') ? 'bottom: 20px;' : 'top: 20px;'} z-index: 9999; font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
                 <!-- Chat Button -->
                 <div id="chat-button" style="width: 60px; height: 60px; background: ${config.primaryColor}; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); transition: all 0.3s ease;">
                     <svg width="24" height="24" fill="white" viewBox="0 0 24 24">
@@ -114,7 +113,7 @@
                 </div>
 
                 <!-- Chat Window -->
-                <div id="chat-window" style="display: none; width: 350px; height: 500px; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); position: absolute; ${config.position.includes('right') ? 'right: 0;' : 'left: 0;'} bottom: 80px; flex-direction: column; overflow: hidden;">
+                <div id="chat-window" style="display: none; width: 350px; height: 500px; min-width: 300px; min-height: 400px; max-width: 800px; max-height: 80vh; background: white; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); position: absolute; ${config.position.includes('right') ? 'right: 0;' : 'left: 0;'} bottom: 80px; flex-direction: column; overflow: hidden;">
                     <!-- Header -->
                     <div style="background: ${config.primaryColor}; color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; gap: 8px; align-items: center;">
@@ -418,7 +417,7 @@
     async function loadConversationHistory() {
         try {
             console.log(`Loading conversation history for session: ${sessionId}, user: ${getUserId()}`);
-            const response = await fetch(`${config.apiUrl}/sessions/${sessionId}/conversations?user_id=${getUserId()}`, {
+            const response = await fetch(`${config.apiUrl}/conversations/${sessionId}`, {
                 method: 'GET',
                 headers: getAuthHeaders()
             });

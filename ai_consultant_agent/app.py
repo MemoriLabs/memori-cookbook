@@ -14,6 +14,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from workflow import CompanyProfile, run_ai_assessment
 
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 # Load environment variables
 load_dotenv()
 
@@ -58,10 +60,10 @@ with st.sidebar:
     st.subheader("🔑 API Keys")
 
     openai_api_key_input = st.text_input(
-        "OpenAI API Key",
-        value=os.getenv("OPENAI_API_KEY", ""),
+        "Gemini API Key",
+        value=os.getenv("GEMINI_API_KEY", ""),
         type="password",
-        help="Your OpenAI API key for the consultant LLM (Memori v3 will register this client).",
+        help="Your Gemini API key for the consultant LLM (Memori v3 will register this client).",
     )
 
     memori_api_key_input = st.text_input(
@@ -80,7 +82,7 @@ with st.sidebar:
 
     if st.button("Save API Keys"):
         if openai_api_key_input:
-            os.environ["OPENAI_API_KEY"] = openai_api_key_input
+            os.environ["GEMINI_API_KEY"] = openai_api_key_input
         if memori_api_key_input:
             os.environ["MEMORI_API_KEY"] = memori_api_key_input
         if tavily_api_key_input:
@@ -91,7 +93,7 @@ with st.sidebar:
             st.warning("Please enter at least one API key")
 
     both_keys_present = bool(os.getenv("TAVILY_API_KEY")) and bool(
-        os.getenv("OPENAI_API_KEY")
+        os.getenv("GEMINI_API_KEY")
     )
     if both_keys_present:
         st.caption("Both API keys detected ✅")
@@ -108,7 +110,7 @@ with st.sidebar:
         - Provides rough *cost bands* and risks.
         - Uses *Memori* + to remember past assessments and Q&A.
 
-        Web research is powered by *Tavily, and reasoning is powered by **OpenAI* via Memori.
+        Web research is powered by *Tavily*, and reasoning is powered by **Gemini** via Memori.
 
         ---
 
@@ -129,11 +131,11 @@ if "company_profile" not in st.session_state:
 if "memory_messages" not in st.session_state:
     st.session_state.memory_messages = []
 
-# Initialize Memori v3 + OpenAI client (once)
+# Initialize Memori v3 + Gemini client (once)
 if "openai_client" not in st.session_state:
-    openai_key = os.getenv("OPENAI_API_KEY", "")
+    openai_key = os.getenv("GEMINI_API_KEY", "")
     if not openai_key:
-        st.warning("OPENAI_API_KEY is not set – Memori v3 will not be active.")
+        st.warning("GEMINI_API_KEY is not set – Memori v3 will not be active.")
     else:
         try:
             db_path = os.getenv("SQLITE_DB_PATH", "./memori.sqlite")
@@ -149,11 +151,12 @@ if "openai_client" not in st.session_state:
 
             SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-            client = OpenAI(api_key=openai_key)
+            client = OpenAI(api_key=openai_key, base_url=GEMINI_BASE_URL)
             mem = Memori(conn=SessionLocal).openai.register(client)
             # Basic attribution so Memori can attach memories
             mem.attribution(entity_id="ai-consultant-user", process_id="ai-consultant")
-            mem.config.storage.build()
+            if mem.config.storage is not None:
+                mem.config.storage.build()
 
             st.session_state.memori = mem
             st.session_state.openai_client = client
@@ -166,7 +169,7 @@ if not tavily_key:
     st.stop()
 if "openai_client" not in st.session_state:
     st.warning(
-        "⚠️ OPENAI_API_KEY missing or Memori v3 failed to initialize – "
+        "⚠️ GEMINI_API_KEY missing or Memori v3 failed to initialize – "
         "LLM responses will not work."
     )
     st.stop()
@@ -358,7 +361,7 @@ Use your memory of prior interactions (via Memori) plus the context below:
 Answer questions helpfully and concisely. If asked outside this scope, politely say you only answer about AI consulting and stored assessments."""
 
                     response = st.session_state.openai_client.chat.completions.create(
-                        model="gpt-4o-mini",
+                        model="models/gemini-2.5-flash",
                         messages=[
                             {"role": "system", "content": full_prompt},
                             {"role": "user", "content": memory_prompt},

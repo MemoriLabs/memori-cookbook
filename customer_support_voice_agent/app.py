@@ -14,6 +14,7 @@ Prereqs:
 import base64
 import os
 from io import BytesIO
+from typing import Any, cast
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -68,7 +69,8 @@ def _init_memori_with_openai() -> Memori | None:
         mem.attribution(
             entity_id="customer-support-user", process_id="customer-support"
         )
-        mem.config.storage.build()
+        if mem.config.storage is not None:
+            mem.config.storage.build()
 
         st.session_state.memori = mem
         st.session_state.openai_client = client
@@ -169,9 +171,9 @@ def _ingest_urls_with_firecrawl(mem: Memori, client: OpenAI, urls: list[str]) ->
             page_dict = page
         else:
             if hasattr(page, "model_dump"):
-                page_dict = page.model_dump()
+                page_dict = cast(Any, page).model_dump()
             elif hasattr(page, "dict"):
-                page_dict = page.dict()
+                page_dict = cast(Any, page).dict()
             else:
                 continue
 
@@ -385,7 +387,9 @@ def main():
                         # Only call .search if this Memori instance actually exposes it.
                         if hasattr(mem, "search"):
                             # Limit to most relevant 5 items
-                            kb_snippets = mem.search(user_input, limit=5) or []
+                            kb_snippets = (
+                                cast(Any, mem).search(user_input, limit=5) or []
+                            )
                     except Exception as search_err:
                         # Non-fatal – the assistant can still answer without KB snippets.
                         st.warning(f"Memori search issue: {search_err}")
