@@ -29,4 +29,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     # Pydantic's BaseSettings loads from environment variables automatically
-    return Settings()  # type: ignore[call-arg]
+    return Settings()  # type: ignore

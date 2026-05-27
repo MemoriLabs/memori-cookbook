@@ -72,7 +72,8 @@ def init_memori_with_openai() -> Memori | None:
         mem = Memori(conn=SessionLocal).openai.register(client)
         # Attribution so Memori can attach memories to this process/entity.
         mem.attribution(entity_id="youtube-channel", process_id="youtube-trend-agent")
-        mem.config.storage.build()
+        if mem.config.storage is not None:
+            mem.config.storage.build()
 
         st.session_state.memori = mem
         st.session_state.openai_client = client

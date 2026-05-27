@@ -69,7 +69,8 @@ def _init_memori_with_openai() -> Memori | None:
         mem.attribution(
             entity_id="customer-support-user", process_id="customer-support"
         )
-        mem.config.storage.build()
+        if mem.config.storage is not None:
+            mem.config.storage.build()
 
         st.session_state.memori = mem
         st.session_state.openai_client = client
