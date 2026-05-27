@@ -114,7 +114,7 @@ class MemoriManager:
         """
         Store a structured learner profile in Memori via a dedicated document.
         We wrap the profile in a small JSON payload tagged as a study profile so
-        it can be retrieved deterministically later via Memori.search().
+        it can be retrieved deterministically later via Memori's search method.
         """
         payload = {
             "type": "study_profile",
