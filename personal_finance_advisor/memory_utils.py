@@ -203,7 +203,7 @@ class MemoriManager:
 
         try:
             results: list[Any] = (
-                recall_fn("FINANCIAL_PROFILE", limit=5) or []  # type: ignore[call-arg]
+                recall_fn("FINANCIAL_PROFILE", limit=5) or []  # type: ignore
             )
         except Exception:
             return None
