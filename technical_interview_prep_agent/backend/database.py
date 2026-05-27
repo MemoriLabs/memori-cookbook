@@ -217,9 +217,10 @@ def calculate_next_review(attempt: ProblemAttempt, was_correct: bool) -> datetim
 
     attempt.review_interval_days = new_interval
     attempt.ease_factor = new_ease
-    attempt.next_review_at = datetime.now(timezone.utc) + timedelta(days=new_interval)
+    next_review_at = datetime.now(timezone.utc) + timedelta(days=new_interval)
+    attempt.next_review_at = next_review_at
 
-    return attempt.next_review_at
+    return next_review_at
 
 
 def get_due_problems(
