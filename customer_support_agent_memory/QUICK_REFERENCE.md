@@ -1,4 +1,4 @@
-# Quick Reference Guide - Customer Support AI API
+# Quick Reference Guide — Customer Support AI API
 
 ## Base URL
 ```
@@ -7,48 +7,34 @@ https://your-api.com   # Production
 ```
 
 ## Authentication
-Most endpoints require domain verification via header:
+All protected endpoints require the domain ID issued at registration:
 ```
-X-Domain-Id: YOUR_DOMAIN_ID
+X-Domain-ID: YOUR_DOMAIN_ID
 ```
 
 ---
 
-## 🤖 Agent & Knowledge Base Persistence
+## Agent & Knowledge Base Persistence
 
-**Note:** Agents and knowledge bases are automatically persisted to the database. They survive application restarts.
+Agents and knowledge bases are automatically persisted to the database and survive restarts.
 
-### On Application Startup
+**Startup log:**
 ```
 ✓ Database connection successful
 DEBUG: Loaded X agents from database
 DEBUG: Loaded Y knowledge bases from database
 ```
 
-### Agent Lifecycle
-1. Check memory cache (fast)
-2. If not found, check database
-3. If not found, create new agent via DigitalOcean API
-4. Save to both memory and database
-
-### Knowledge Base Lifecycle
-1. Check memory cache (fast)
-2. If not found, check database
-3. If not found, create new KB via DigitalOcean API
-4. Save to both memory and database
-
 ---
 
 ## 📊 Health Check
 
-**Endpoint:** `GET /health`
+**`GET /health`**
 
-**Example:**
 ```bash
 curl http://localhost:8000/health
 ```
 
-**Response:**
 ```json
 {
     "status": "healthy",
@@ -63,26 +49,43 @@ curl http://localhost:8000/health
 
 ---
 
-## 🔐 Session Management
+## 🌐 Register Domain
 
-**Endpoint:** `POST /session`
+**`POST /register-domain`**
 
-**Body:**
+```bash
+curl -X POST http://localhost:8000/register-domain \
+  -H "Content-Type: application/json" \
+  -d '{"domain_name": "example.com"}'
+```
+
 ```json
 {
-    "user_id": "user123",
-    "website_url": "https://example.com"
+    "message": "Domain registered successfully",
+    "domain_id": "uuid-here",
+    "agent_created": true,
+    "agent_uuid": "agent-uuid-here",
+    "agent_deployment_status": "STATUS_WAITING_FOR_DEPLOYMENT",
+    "deployment_message": "Agent created successfully. Deployment will complete in 1-2 minutes."
 }
 ```
 
-**Example:**
+> Copy the `domain_id` — you need it as the `X-Domain-ID` header for all subsequent requests.
+
+---
+
+## 🔐 Session Management
+
+**`POST /session`**
+
+**Headers:** `X-Domain-ID` (not required for session creation, but needed for `/ask`)
+
 ```bash
-curl -X POST "http://localhost:8000/session" \
+curl -X POST http://localhost:8000/session \
   -H "Content-Type: application/json" \
-  -d '{"user_id":"user123","website_url":"https://example.com"}'
+  -d '{"user_id": "user123", "website_url": "https://example.com"}'
 ```
 
-**Response:**
 ```json
 {
     "session_id": "uuid-here",
@@ -96,26 +99,14 @@ curl -X POST "http://localhost:8000/session" \
 
 ## 💬 Ask Question
 
-**Endpoint:** `POST /ask`
+**`POST /ask`**
 
-**Headers:**
-- `X-Domain-Id`: YOUR_DOMAIN_ID (optional)
+**Headers:** `X-Domain-ID` (required)
 
-**Body:**
-```json
-{
-    "question": "How do I reset my password?",
-    "session_id": "uuid-here",
-    "user_id": "user123",
-    "website_context": "https://example.com/login"
-}
-```
-
-**Example:**
 ```bash
-curl -X POST "http://localhost:8000/ask" \
+curl -X POST http://localhost:8000/ask \
   -H "Content-Type: application/json" \
-  -H "X-Domain-Id: YOUR_DOMAIN_ID" \
+  -H "X-Domain-ID: YOUR_DOMAIN_ID" \
   -d '{
     "question": "How do I reset my password?",
     "session_id": "uuid-here",
@@ -123,7 +114,6 @@ curl -X POST "http://localhost:8000/ask" \
   }'
 ```
 
-**Response:**
 ```json
 {
     "answer": "To reset your password...",
@@ -134,35 +124,25 @@ curl -X POST "http://localhost:8000/ask" \
 
 ---
 
----
+## 📄 Upload File
 
-## 📄 Upload File (DigitalOcean)
+**`POST /knowledge/upload/file`** — `multipart/form-data`
 
-**Endpoint:** `POST /knowledge/upload/file`
+**Headers:** `X-Domain-ID` (required)
 
-**Content-Type:** `multipart/form-data`
-
-**Headers:**
-- `X-Domain-ID`: YOUR_DOMAIN_ID
-
-**Parameters:**
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| file | file | ✅ Yes | - | File to upload (.pdf, .txt, .md, .json, .csv) |
-| chunk_size | integer | ❌ No | 1000 | Size of text chunks |
-| use_semantic | boolean | ❌ No | false | Use semantic chunking |
-| custom_name | string | ❌ No | filename | Custom document name |
+| file | file | ✅ | — | `.pdf`, `.txt`, `.md`, `.json`, `.csv` |
+| chunk_size | integer | ❌ | 1000 | Size of text chunks |
+| use_semantic | boolean | ❌ | false | Semantic chunking |
+| custom_name | string | ❌ | filename | Custom document name |
 
-**Note:** Uses DigitalOcean's presigned URL upload + indexing jobs
-
-**Example:**
 ```bash
-curl -X POST "http://localhost:8000/knowledge/upload/file" \
+curl -X POST http://localhost:8000/knowledge/upload/file \
   -H "X-Domain-ID: YOUR_DOMAIN_ID" \
   -F "file=@document.pdf"
 ```
 
-**Success Response:**
 ```json
 {
     "success": true,
@@ -179,112 +159,44 @@ curl -X POST "http://localhost:8000/knowledge/upload/file" \
 
 ---
 
-## 📝 Upload Text (DigitalOcean)
+## 📝 Upload Text
 
-**Endpoint:** `POST /knowledge/upload/text`
+**`POST /knowledge/upload/text`** — `application/json`
 
-**Content-Type:** `application/json`
+**Headers:** `X-Domain-ID` (required)
 
-**Headers:**
-- `X-Domain-ID`: YOUR_DOMAIN_ID
-
-**Body:**
-```json
-{
-    "text_content": "Your text content here",
-    "document_name": "My Document",
-    "chunk_size": 1000,
-    "use_semantic": false
-}
-```
-
-**Example:**
 ```bash
-curl -X POST "http://localhost:8000/knowledge/upload/text" \
+curl -X POST http://localhost:8000/knowledge/upload/text \
   -H "X-Domain-ID: YOUR_DOMAIN_ID" \
   -H "Content-Type: application/json" \
-  -d '{"text_content":"FAQ content","document_name":"FAQ"}'
+  -d '{"text_content": "FAQ content here", "document_name": "FAQ"}'
 ```
 
 ---
 
-## 🌐 Upload from URL (DigitalOcean Web Crawler)
+## 🌐 Upload from URL
 
-**Endpoint:** `POST /knowledge/upload/url`
+**`POST /knowledge/upload/url`** — `application/json`
 
-**Content-Type:** `application/json`
+**Headers:** `X-Domain-ID` (required)
 
-**Headers:**
-- `X-Domain-ID`: YOUR_DOMAIN_ID
-
-**Body:**
-```json
-{
-    "url_to_scrape": "https://docs.example.com",
-    "max_depth": 2,
-    "max_links": 20,
-    "chunk_size": 1000
-}
-```
-
-**Example:**
 ```bash
-curl -X POST "http://localhost:8000/knowledge/upload/url" \
+curl -X POST http://localhost:8000/knowledge/upload/url \
   -H "X-Domain-ID: YOUR_DOMAIN_ID" \
   -H "Content-Type: application/json" \
-  -d '{"url_to_scrape":"https://docs.example.com"}'
+  -d '{"url_to_scrape": "https://docs.example.com", "max_depth": 2, "max_links": 20}'
 ```
-
----
-
-## 🕷️ Scrape Website (DigitalOcean Web Crawler)
-
-**Endpoint:** `POST /scrape-website`
-
-**Body:**
-```json
-{
-    "website_url": "https://example.com",
-    "depth": 2,
-    "max_pages": 20
-}
-```
-
-**Example:**
-```bash
-curl -X POST "http://localhost:8000/scrape-website" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "website_url": "https://example.com",
-    "depth": 2,
-    "max_pages": 20
-  }'
-```
-
-**Response:**
-```json
-{
-    "success": true,
-    "pages_scraped": 15,
-    "message": "Successfully indexed https://example.com",
-    "website_url": "https://example.com"
-}
-```
-
----
 
 ---
 
 ## 📚 List Agents
 
-**Endpoint:** `GET /agents`
+**`GET /agents`**
 
-**Example:**
 ```bash
 curl http://localhost:8000/agents
 ```
 
-**Response:**
 ```json
 {
     "agents": [
@@ -298,22 +210,21 @@ curl http://localhost:8000/agents
             "knowledge_base_uuids": ["kb-uuid-1"]
         }
     ],
-    "total": 1
+    "total": 1,
+    "note": "One agent per website, shared across all sessions. Memori provides user/session context."
 }
 ```
 
 ---
 
-## 📚 Get Supported File Types
+## 📚 Supported File Types
 
-**Endpoint:** `GET /knowledge/supported-types`
+**`GET /knowledge/supported-types`**
 
-**Example:**
 ```bash
-curl -X GET "http://localhost:8000/knowledge/supported-types"
+curl http://localhost:8000/knowledge/supported-types
 ```
 
-**Response:**
 ```json
 {
     "supported_types": [".pdf", ".txt", ".md", ".json", ".csv"],
@@ -324,108 +235,42 @@ curl -X GET "http://localhost:8000/knowledge/supported-types"
         ".json": "JSON data files",
         ".csv": "CSV data files"
     },
-    "additional_sources": ["url", "text"],
-    "registered_domain": "example.com",
-    "website_url": "https://example.com"
+    "additional_sources": ["url", "text"]
 }
 ```
 
 ---
 
-## 🗄️ Database Persistence
+## 💬 Conversation History
 
-### Automatic Persistence
-All agents and knowledge bases are automatically saved to PostgreSQL:
-- ✅ Survives application restarts
-- ✅ Fast memory cache for lookups
-- ✅ Database fallback for recovery
-- ✅ No manual intervention needed
+**`GET /conversations/{session_id}`**
 
-### Monitoring Queries
-
-**Check stored agents:**
-```sql
-SELECT website_key, agent_uuid, website_url, created_at
-FROM agents
-ORDER BY created_at DESC;
+```bash
+curl http://localhost:8000/conversations/SESSION_ID
 ```
 
-**Check stored knowledge bases:**
-```sql
-SELECT website_key, kb_uuid, website_url, kb_name
-FROM knowledge_bases
-ORDER BY created_at DESC;
-```
+---
 
-**Count resources:**
+## 🗄️ Database Monitoring
+
 ```sql
+-- All registered domains
+SELECT id, domain_name, created_at FROM registered_domains ORDER BY created_at DESC;
+
+-- All agents
+SELECT website_key, agent_uuid, website_url, LENGTH(agent_access_key) as key_len
+FROM agents ORDER BY created_at DESC;
+
+-- All knowledge bases
+SELECT website_key, kb_uuid, website_url, kb_name FROM knowledge_bases ORDER BY created_at DESC;
+
+-- Resource counts
 SELECT
+    (SELECT COUNT(*) FROM registered_domains) as total_domains,
     (SELECT COUNT(*) FROM agents) as total_agents,
     (SELECT COUNT(*) FROM knowledge_bases) as total_kbs,
     (SELECT COUNT(*) FROM user_sessions WHERE status = 'active') as active_sessions;
 ```
-
-### Migration
-
-**For existing installations:**
-```bash
-psql -h localhost -U do_user -d customer_support -f migrate_db.sql
-```
-
-See `DATABASE_PERSISTENCE.md` for full documentation.
-
----
-
-## Response Format
-
-### Success Response
-```json
-{
-    "success": true,
-    "message": "Successfully uploaded document.pdf",
-    "details": {
-        "filename": "document.pdf",
-        "file_type": ".pdf",
-        "file_size": 524288,
-        "chunk_size": 1000,
-        "chunking_strategy": "recursive"
-    }
-}
-```
-
-### Error Response
-```json
-{
-    "success": false,
-    "message": "Error message here"
-}
-```
-
----
-
-## Quick Tips
-
-### ✅ Chunk Size Selection
-- **Small docs (< 10 pages):** 500-800
-- **Medium docs (10-50 pages):** 1000-1500
-- **Large docs (> 50 pages):** 1500-2000
-
-### ✅ When to Use Semantic Chunking
-- ✓ Technical documentation
-- ✓ Research papers
-- ✓ Legal documents
-- ✗ FAQs (use standard)
-- ✗ Lists (use standard)
-- ✗ Tables (use standard)
-
-### ✅ Supported File Types
-| Extension | Description | Reader |
-|-----------|-------------|--------|
-| .pdf | PDF documents | PDFReader |
-| .txt | Plain text | TextReader |
-| .md | Markdown | MarkdownReader |
-| .json | JSON data | JSONReader |
-| .csv | CSV data | CSVReader |
 
 ---
 
@@ -434,39 +279,11 @@ See `DATABASE_PERSISTENCE.md` for full documentation.
 | Status | Description |
 |--------|-------------|
 | 200 | Success |
-| 400 | Bad request (invalid parameters) |
-| 401 | Unauthorized (invalid API key) |
+| 400 | Bad request (missing required header or invalid parameters) |
+| 401 | Unauthorized (unknown domain_id) |
 | 404 | Not found |
 | 500 | Server error |
-| 504 | Timeout (scraping took too long) |
-
----
-
-## Testing
-
-### Web Demo
-Visit: `http://localhost:8000/knowledge-upload-demo`
-
-### Health Check
-```bash
-curl http://localhost:8000/health
-```
-
----
-
-## Common Issues
-
-### Issue: "Unsupported file type"
-**Solution:** Check file extension. Only .pdf, .txt, .md, .json, .csv are supported.
-
-### Issue: "Unauthorized"
-**Solution:** Check your domain ID is correct and included in X-Domain-ID header.
-
-### Issue: Upload timeout
-**Solution:** For URLs, reduce max_depth or max_links. For files, try smaller chunk_size.
-
-### Issue: Poor search results
-**Solution:** Try semantic chunking or adjust chunk_size.
+| 503 | Agent still deploying — retry in 1-2 minutes |
 
 ---
 
@@ -475,98 +292,73 @@ curl http://localhost:8000/health
 ```python
 import requests
 
-class KnowledgeClient:
+class CustomerSupportClient:
     def __init__(self, api_url, domain_id):
         self.api_url = api_url
         self.headers = {"X-Domain-ID": domain_id}
 
-    def upload_file(self, file_path, chunk_size=1000):
-        with open(file_path, 'rb') as f:
-            files = {'file': f}
-            data = {
-                'chunk_size': chunk_size
-            }
+    def register_domain(self, domain_name):
+        response = requests.post(
+            f"{self.api_url}/register-domain",
+            json={"domain_name": domain_name}
+        )
+        return response.json()
+
+    def create_session(self, user_id):
+        response = requests.post(
+            f"{self.api_url}/session",
+            json={"user_id": user_id}
+        )
+        return response.json()
+
+    def ask(self, question, session_id, user_id):
+        response = requests.post(
+            f"{self.api_url}/ask",
+            headers=self.headers,
+            json={"question": question, "session_id": session_id, "user_id": user_id}
+        )
+        return response.json()
+
+    def upload_file(self, file_path):
+        with open(file_path, "rb") as f:
             response = requests.post(
                 f"{self.api_url}/knowledge/upload/file",
                 headers=self.headers,
-                files=files,
-                data=data
+                files={"file": f}
             )
-            return response.json()
+        return response.json()
 
     def upload_text(self, text_content, document_name):
         response = requests.post(
             f"{self.api_url}/knowledge/upload/text",
-            headers=self.headers,
-            json={
-                'text_content': text_content,
-                'document_name': document_name
-            }
+            headers={**self.headers, "Content-Type": "application/json"},
+            json={"text_content": text_content, "document_name": document_name}
         )
         return response.json()
 
 # Usage
-client = KnowledgeClient("http://localhost:8000", "YOUR_DOMAIN_ID")
-result = client.upload_file("document.pdf")
-print(result)
+client = CustomerSupportClient("http://localhost:8000", "YOUR_DOMAIN_ID")
+session = client.create_session("user123")
+answer = client.ask("How do I reset my password?", session["session_id"], "user123")
+print(answer["answer"])
 ```
 
 ---
 
-## JavaScript Client Example
+## Common Issues
 
-```javascript
-class KnowledgeClient {
-    constructor(apiUrl, domainId) {
-        this.apiUrl = apiUrl;
-        this.domainId = domainId;
-    }
-
-    async uploadFile(file, chunkSize = 1000) {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('chunk_size', chunkSize);
-
-        const response = await fetch(`${this.apiUrl}/knowledge/upload/file`, {
-            method: 'POST',
-            headers: {
-                'X-Domain-ID': this.domainId
-            },
-            body: formData
-        });
-        return await response.json();
-    }
-
-    async uploadText(textContent, documentName) {
-        const response = await fetch(`${this.apiUrl}/knowledge/upload/text`, {
-            method: 'POST',
-            headers: {
-                'X-Domain-ID': this.domainId,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                text_content: textContent,
-                document_name: documentName
-            })
-        });
-        return await response.json();
-    }
-}
-
-// Usage
-const client = new KnowledgeClient('http://localhost:8000', 'YOUR_DOMAIN_ID');
-const result = await client.uploadText(
-    'FAQ content',
-    'Customer FAQ'
-);
-console.log(result);
-```
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| 503 on `/ask` | Agent still deploying | Wait 1-2 min and retry |
+| 401 on any endpoint | Wrong or missing `X-Domain-ID` | Register domain first, use returned `domain_id` |
+| 400 on `/register-domain` | Invalid domain format | Use bare hostname: `example.com`, not `https://example.com` |
+| Widget not loading | Static files 404 | Run uvicorn from parent dir: `uvicorn customer_support_agent_memory.main:app` |
 
 ---
 
-## Need Help?
+## Quick Tips
 
-- 📖 **Full Documentation:** See `KNOWLEDGE_UPLOAD_EXAMPLES.md`
-- 🎮 **Interactive Demo:** Visit `/knowledge-upload-demo`
-- 📝 **API Docs:** Visit `/docs` (Swagger UI)
-- 🐛 **Issues:** Check logs or contact support
+- **Chunk size:** 500–800 for short docs, 1000–1500 for medium, 1500–2000 for large
+- **Semantic chunking:** Better for technical docs and research papers; standard is fine for FAQs and tables
+- **One agent per domain:** Shared across all users — Memori handles per-user memory
+- **Agent deployment takes 1-2 min:** The widget shows a friendly message during this window

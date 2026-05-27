@@ -4,145 +4,381 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Customer Support Widget Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 40px;
-            background: #f8f9fa;
+            font-family: 'Roboto', sans-serif;
+            background: #f0f2f5;
+            color: #1a1a2e;
+            min-height: 100vh;
         }
-        .container {
-            max-width: 800px;
+
+        /* ── Header ── */
+        .hero {
+            background: linear-gradient(135deg, #0061ff 0%, #60efff 100%);
+            color: white;
+            padding: 48px 40px 40px;
+            text-align: center;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .hero h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .hero p {
+            font-size: 16px;
+            font-weight: 300;
+            opacity: 0.9;
+            max-width: 520px;
             margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* ── Layout ── */
+        .page { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+        /* ── Cards ── */
+        .card {
             background: white;
-            padding: 40px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
             margin-bottom: 24px;
+            overflow: hidden;
         }
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 20px 24px 16px;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #eff6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .card-icon svg { color: #0061ff; }
+        .card-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111;
+        }
+        .card-body { padding: 20px 24px 24px; }
+
+        /* ── Code blocks ── */
         .code-block {
-            background: #f6f8fa;
-            border: 1px solid #e1e4e8;
-            border-radius: 6px;
-            padding: 16px;
-            margin: 16px 0;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-            font-size: 14px;
+            background: #0f1117;
+            color: #e8eaf6;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 12px 0;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
             overflow-x: auto;
+            white-space: pre;
         }
-        .button {
-            background: #007bff;
+        code {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 13px;
+            background: #eff6ff;
+            color: #0061ff;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* ── Steps ── */
+        ol.steps { list-style: none; counter-reset: steps; }
+        ol.steps li {
+            counter-increment: steps;
+            display: flex;
+            gap: 14px;
+            margin-bottom: 16px;
+            align-items: flex-start;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #374151;
+        }
+        ol.steps li::before {
+            content: counter(steps);
+            min-width: 26px;
+            height: 26px;
+            background: #0061ff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* ── Config table ── */
+        .config-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .config-table th {
+            text-align: left;
+            padding: 10px 14px;
+            background: #f8fafc;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .config-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f0f2f5;
+            vertical-align: top;
+            color: #374151;
+            line-height: 1.5;
+        }
+        .config-table tr:last-child td { border-bottom: none; }
+        .config-table td:first-child { font-family: 'Roboto Mono', monospace; font-size: 12px; color: #0061ff; }
+
+        /* ── Warning box ── */
+        .notice {
+            display: flex;
+            gap: 12px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin: 16px 0;
+            font-size: 14px;
+            color: #92400e;
+            line-height: 1.5;
+        }
+        .notice-icon { font-size: 18px; flex-shrink: 0; }
+
+        /* ── Info box ── */
+        .info {
+            display: flex;
+            gap: 12px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 14px 16px;
+            margin: 16px 0;
+            font-size: 14px;
+            color: #1e40af;
+            line-height: 1.5;
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #0061ff;
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            margin: 8px;
-            font-size: 14px;
-        }
-        .button:hover {
-            background: #0056b3;
-        }
-        .section {
-            margin: 32px 0;
-            padding: 24px;
-            border: 1px solid #e1e4e8;
+            padding: 10px 20px;
             border-radius: 8px;
+            cursor: pointer;
+            margin: 6px 6px 6px 0;
+            font-size: 14px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            transition: background 0.15s;
         }
-        .controls {
-            margin: 24px 0;
+        .btn:hover { background: #004ecc; }
+        .btn-ghost {
+            background: white;
+            color: #374151;
+            border: 1px solid #d1d5db;
         }
+        .btn-ghost:hover { background: #f9fafb; }
+
+        /* ── Security badges ── */
+        .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* ── Links ── */
+        a { color: #0061ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        p { line-height: 1.6; color: #374151; margin-bottom: 12px; }
+        p:last-child { margin-bottom: 0; }
+        h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #111; }
+        ul { padding-left: 20px; }
+        ul li { margin-bottom: 6px; line-height: 1.5; font-size: 14px; color: #374151; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Customer Support Widget Demo</h1>
 
-        <p>This is a demonstration page showing how the customer support widget works. The widget should appear as a floating chat button in the bottom-right corner.</p>
-
-        <div class="section">
-            <h3>How to integrate the widget into your website:</h3>
-
-            <p><strong>Quick integration:</strong> include one script tag and provide the <code>domain_id</code> your backend issued via a data attribute.</p>
-            <div class="code-block">
-&lt;script src="https://customer-support-chat-o73m4.ondigitalocean.app/static/widget.js" data-domain-id="123"&gt;&lt;/script&gt;
-            </div>
-
-            <h4>How to get your <code>domain_id</code></h4>
-            <ol>
-                <li>Open the API docs: <a href="https://customer-support-chat-o73m4.ondigitalocean.app/docs" target="_blank">/docs (Swagger)</a></li>
-                <li>Click the <strong>Authorize</strong> button in the top-right of the docs UI and paste your domain API key (from the register-domain response). This will add the Authorization header to the requests made from the docs UI.</li>
-                <li>Find the <code>POST /register-domain</code> endpoint in the docs (under domain registration).</li>
-                <li>Call the endpoint with a JSON body like: <code>{ "domain_name": "memori.gibsonai.com" }</code>. Use your site hostname (no scheme/path).</li>
-                <li>The endpoint will return JSON containing <code>domain_id</code>. Copy that value and use it in the widget script tag's <code>data-domain-id</code>.</li>
-            </ol>
-
-            <p>Optional customization via data attributes:</p>
-            <div class="code-block">
-&lt;script
-data-api-url="https://customer-support-chat-o73m4.ondigitalocean.app"   &lt;!-- backend API URL (optional if different) --&gt;
-data-primary-color="#28a745"        &lt;!-- main widget color --&gt;
-data-widget-title="Help & Support"  &lt;!-- title in header --&gt;
-data-position="bottom-left"         &lt;!-- bottom-right, bottom-left, top-right, top-left --&gt;
-data-auto-scrape="true" &gt;&lt;/script&gt;
-            </div>
-
-            <div style="background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; padding: 16px; margin: 16px 0;">
-                <strong>⚠️ Important:</strong> You must provide a valid <code>domain_id</code> for the widget to work.
-                Without a valid <code>domain_id</code>, API requests will return 401 Unauthorized errors.
-            </div>
-        </div>
-
-        <div class="section">
-            <h3>Widget Controls (Demo):</h3>
-            <div class="controls">
-                <button class="button" onclick="CustomerSupportWidget.open()">Open Chat</button>
-                <button class="button" onclick="CustomerSupportWidget.close()">Close Chat</button>
-                <button class="button" onclick="CustomerSupportWidget.sendMessage('Hello! I need help with your services.')">Send Test Message</button>
-            </div>
-        </div>
-
-        <div class="section">
-            <h3>Configuration Options:</h3>
-            <ul>
-                <li><strong>domain_id</strong>: The identifier issued to your site by the registration endpoint (required for authentication)</li>
-                <li><strong>position</strong>: 'bottom-right', 'bottom-left', 'top-right', 'top-left'</li>
-                <li><strong>primaryColor</strong>: Main color for the widget</li>
-                <li><strong>secondaryColor</strong>: Background color for bot messages</li>
-                <li><strong>widgetTitle</strong>: Title shown in the chat header</li>
-                <li><strong>welcomeMessage</strong>: First message displayed to users</li>
-                <li><strong>autoScrape</strong>: Automatically scrape current website content</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h3>Authentication:</h3>
-            <p>This customer support widget requires authentication using a server-issued <code>domain_id</code>. Here's what you need to know:</p>
-            <ul>
-                <li><strong>Required:</strong> You must provide a <code>domain_id</code> assigned to your site.</li>
-                <li><strong>Security:</strong> The widget sends the <code>X-Domain-ID</code> header with requests. The server verifies the <code>domain_id</code> against the registered domains table; the widget never sends secret API keys from the browser.</li>
-                <li><strong>Validation:</strong> The domain is validated on the server during each request when necessary.</li>
-                <li><strong>Error Handling:</strong> Invalid or missing <code>domain_id</code> will cause authentication errors (401/400).</li>
-            </ul>
-        </div>
-
-        <div class="section">
-            <h3>How it works:</h3>
-            <ol>
-                <li>The widget uses the provided <code>domain_id</code> to identify the site when making requests</li>
-                <li>A session is created when the chat is first opened (requires valid <code>domain_id</code>)</li>
-                <li>If <code>autoScrape</code> is enabled, it scrapes your website content for context (the request includes your <code>domain_id</code>)</li>
-                <li>Users can ask questions and get AI-powered responses based on your website (requires valid <code>domain_id</code>)</li>
-                <li>All conversations are remembered for personalized support</li>
-                <li>The AI agent can use website tools to fetch additional information when needed</li>
-            </ol>
-        </div>
+    <div class="hero">
+        <div class="hero-badge">Powered by Memori + DigitalOcean Gradient AI</div>
+        <h1>Customer Support Widget</h1>
+        <p>An embeddable AI chat widget with persistent memory. One script tag — your users get support that remembers them.</p>
     </div>
 
-    <!-- Include the widget script (provide the domain_id issued by your backend via data-domain-id) -->
-    <script src="/static/widget.js" data-domain-id="123"></script>
+    <div class="page">
+
+        <!-- Quick start -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                </div>
+                <h2>Quick Start — Embed the Widget</h2>
+            </div>
+            <div class="card-body">
+                <p>Add a single script tag to your site and the chat bubble appears automatically.</p>
+                <div class="code-block">&lt;script src="https://your-api.com/static/widget.js"
+        data-domain-id="YOUR_DOMAIN_ID"&gt;&lt;/script&gt;</div>
+
+                <div class="notice">
+                    <span class="notice-icon">⚠️</span>
+                    <span>You need a <strong>Domain ID</strong> from the registration step below. Without it the widget will not load.</span>
+                </div>
+
+                <h3>How to get your Domain ID</h3>
+                <ol class="steps">
+                    <li>Open <a href="/docs" target="_blank">Swagger UI → /docs</a></li>
+                    <li>Find <strong>POST /register-domain</strong> and call it with your site hostname — e.g. <code>{"domain_name": "example.com"}</code> (no scheme, no path)</li>
+                    <li>Copy the <code>domain_id</code> UUID from the response</li>
+                    <li>Paste it into the <code>data-domain-id</code> attribute above</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Live demo controls -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <h2>Widget Controls (this page)</h2>
+            </div>
+            <div class="card-body">
+                <p>The chat bubble is in the bottom-right corner. Use these buttons to interact with it programmatically.</p>
+                <div>
+                    <button class="btn" onclick="CustomerSupportWidget.open()">
+                        <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                        Open Chat
+                    </button>
+                    <button class="btn btn-ghost" onclick="CustomerSupportWidget.close()">Close Chat</button>
+                    <button class="btn btn-ghost" onclick="CustomerSupportWidget.sendMessage('Hello! I need help with your services.')">Send Test Message</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                </div>
+                <h2>Configuration Options</h2>
+            </div>
+            <div class="card-body">
+                <p>All options can be set via <code>data-*</code> attributes on the script tag.</p>
+                <div class="code-block">&lt;script src="/static/widget.js"
+        data-domain-id="YOUR_DOMAIN_ID"
+        data-api-url="https://your-api.com"
+        data-primary-color="#0061ff"
+        data-widget-title="Help &amp; Support"
+        data-position="bottom-right"&gt;&lt;/script&gt;</div>
+
+                <table class="config-table">
+                    <thead>
+                        <tr><th>Attribute</th><th>Default</th><th>Description</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>data-domain-id</td><td>—</td><td><strong>Required.</strong> UUID from POST /register-domain</td></tr>
+                        <tr><td>data-api-url</td><td>script origin</td><td>Backend API URL (auto-detected if widget is served from the API server)</td></tr>
+                        <tr><td>data-primary-color</td><td>#007bff</td><td>Main accent color for the widget header and buttons</td></tr>
+                        <tr><td>data-widget-title</td><td>Customer Support</td><td>Title shown in the chat header</td></tr>
+                        <tr><td>data-position</td><td>bottom-right</td><td>bottom-right, bottom-left, top-right, top-left</td></tr>
+                        <tr><td>data-auto-scrape</td><td>true</td><td>Send the current page URL with sessions for context</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Security -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h2>Security Model</h2>
+            </div>
+            <div class="card-body">
+                <p>The widget uses a <strong>domain ID</strong> (a server-issued UUID), not a secret key. There are no credentials in the browser.</p>
+                <ul>
+                    <li>The widget sends <code>X-Domain-ID: &lt;uuid&gt;</code> with every request</li>
+                    <li>The server looks up the UUID in the <code>registered_domains</code> table</li>
+                    <li>Per-domain memory isolation — users on site A never see memories from site B</li>
+                    <li>Invalid or missing domain ID returns 400/401 immediately</li>
+                </ul>
+                <div class="badge-row">
+                    <span class="badge">✓ No secrets in browser</span>
+                    <span class="badge">✓ Per-domain isolation</span>
+                    <span class="badge">✓ Per-user memory scoping</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- How it works -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-icon">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                </div>
+                <h2>How It Works</h2>
+            </div>
+            <div class="card-body">
+                <ol class="steps">
+                    <li>Widget opens → creates a session tied to this user (stored in <code>localStorage</code> for continuity)</li>
+                    <li>User asks a question → sent to <code>POST /ask</code> with the domain ID and session ID</li>
+                    <li>The server retrieves the DigitalOcean Gradient AI agent for this domain</li>
+                    <li>Memori recalls relevant facts from this user's past conversations and injects them as context</li>
+                    <li>The LLM (Llama via DigitalOcean) answers using knowledge base content + recalled user context</li>
+                    <li>Memori stores new facts from the answer in the background for future recall</li>
+                </ol>
+                <div class="info">
+                    <span>ℹ️</span>
+                    <span>DigitalOcean handles <strong>what the site does</strong> (RAG over your content). Memori handles <strong>who the user is</strong> (persistent cross-session memory).</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/static/widget.js" data-domain-id="YOUR_DOMAIN_ID"></script>
 </body>
 </html>

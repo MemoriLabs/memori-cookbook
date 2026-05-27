@@ -44,7 +44,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ./static:/app/static
+      - ./static:/workspace/customer_support_agent_memory/static
     networks:
       - customer_support_network
     restart: unless-stopped

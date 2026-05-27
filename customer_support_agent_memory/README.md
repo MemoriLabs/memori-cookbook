@@ -71,8 +71,8 @@ This version uses Memori with direct database integration:
 ### 1. Clone and Configure
 
 ```bash
-git clone https://github.com/MemoriLabs/customer-support-agent-memory.git
-cd customer-support-agent-memori
+git clone https://github.com/MemoriLabs/memori-cookbook.git
+cd memori-cookbook/customer_support_agent_memory
 
 # Update your configuration in .env file
 cp .env.example .env
@@ -135,7 +135,8 @@ cp .env.example .env
 ### 4. Run the Application
 
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Run from the parent memori-cookbook directory
+uvicorn customer_support_agent_memory.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Integration Guide
@@ -159,18 +160,19 @@ For complete API documentation, see [QUICK_REFERENCE.md](QUICK_REFERENCE.md).
 ```http
 POST /register-domain
 Content-Type: application/json
-Authorization: Bearer YOUR_ADMIN_API_KEY
 
 {
     "domain_name": "example.com"
 }
-}
 
 Response:
 {
+    "message": "Domain registered successfully",
     "domain_id": "uuid-here",
-    "api_key": "generated-api-key",
-    "message": "Domain registered successfully"
+    "agent_created": true,
+    "agent_uuid": "uuid-here",
+    "agent_deployment_status": "STATUS_WAITING_FOR_DEPLOYMENT",
+    "deployment_message": "Agent created successfully. Deployment will complete in 1-2 minutes."
 }
 ```
 
@@ -297,15 +299,16 @@ X-Domain-ID: your-domain-id
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DIGITALOCEAN_TOKEN` | DigitalOcean API token (required) | - |
-| `DIGITALOCEAN_AGENT_NAME` | Agent name prefix | `customer-support` |
-| `DIGITALOCEAN_KNOWLEDGE_BASE_NAME` | KB name prefix | `website-kb` |
-| `DIGITALOCEAN_AGENT_INSTRUCTIONS` | Agent instructions | Custom instructions |
-| `DIGITALOCEAN_MODEL` | AI model to use | `deepseek-ai/DeepSeek-V3` |
+| `DIGITALOCEAN_PROJECT_ID` | DigitalOcean project UUID (required) | - |
+| `DIGITALOCEAN_AI_MODEL_ID` | Gradient AI model UUID | Llama model |
+| `DIGITALOCEAN_EMBEDDING_MODEL_ID` | Embedding model UUID | Default embedding model |
+| `DIGITALOCEAN_REGION` | Deployment region | `tor1` |
 | `POSTGRES_HOST` | PostgreSQL host | `localhost` |
 | `POSTGRES_PORT` | PostgreSQL port | `5432` |
 | `POSTGRES_DB` | Database name | `customer_support` |
 | `POSTGRES_USER` | Database user | `do_user` |
 | `POSTGRES_PASSWORD` | Database password | `do_user_password` |
+| `DATABASE_URL` | Full PostgreSQL connection string | Constructed from above |
 
 ## Database Schema
 
@@ -471,23 +474,20 @@ For detailed troubleshooting, see [ARCHITECTURE.md - Troubleshooting Section](AR
 │                                #   - Agent creation & management
 │                                #   - Knowledge base operations
 │                                #   - Access key creation (POST /api_keys)
-├── memori_client.py             # Memori API client (domain-specific memory)
-│                                #   - MemoriClient class
-│                                #   - Async chat() and get_context() methods
-├── knowledge_upload.py          # Knowledge base file upload handler
-├── memori_tool.py               # Memori tool integration (legacy)
-├── auth.py                      # Authentication utilities
+├── memori_integration.py        # Memori integration with DigitalOcean Gradient AI
+│                                #   - MemoriIntegration class
+│                                #   - Automatic memory capture and recall
 ├── requirements.txt             # Python dependencies
 ├── docker-compose.yml           # Docker services configuration
 ├── Dockerfile                   # API container definition
 ├── init.sql                     # Database initialization schema
 ├── Procfile                     # Heroku deployment configuration
-├── .env                         # Environment variables (not in repo)
+├── .env.example                 # Environment variable template
 ├── ARCHITECTURE.md              # 📚 Complete system architecture
 ├── QUICK_REFERENCE.md           # 📘 API quick reference guide
 ├── README.md                    # This file
 ├── static/
-│   ├── widget.js                # Embeddable widget (no auto-scrape)
+│   ├── widget.js                # Embeddable chat widget
 │   ├── demo.html                # Integration demo page
 │   └── knowledge_upload_demo.html # KB upload demo
 └── __pycache__/                 # Python bytecode cache
@@ -496,9 +496,8 @@ For detailed troubleshooting, see [ARCHITECTURE.md - Troubleshooting Section](AR
 **Key Files**:
 - **main.py**: Core FastAPI app with domain registration, session management, chat, and knowledge endpoints
 - **digitalocean_client.py**: Handles all DigitalOcean API interactions including agent/KB creation and access key management
-- **memori_client.py**: Dedicated module for Memori API integration with per-domain memory isolation
-- **knowledge_upload.py**: Processes file uploads (PDF, TXT, MD, JSON, CSV) and URL scraping
-- **widget.js**: Client-side embeddable widget (updated to remove auto-scraping)
+- **memori_integration.py**: Wraps the DigitalOcean Gradient AI client with Memori for automatic per-user memory
+- **widget.js**: Client-side embeddable widget with session persistence and conversation history
 
 ## Contributing
 
