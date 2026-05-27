@@ -68,7 +68,7 @@ class ProblemAttempt(Base):
             "createdAt": self.created_at.isoformat() if self.created_at else None,
             "title": self.title,
             "difficulty": self.difficulty,
-            "patterns": json.loads(self.patterns) if self.patterns else [],  # type: ignore[arg-type]
+            "patterns": json.loads(self.patterns) if self.patterns else [],  # type: ignore
             "statement": self.statement,
             "language": self.language,
             "code": self.code,
@@ -138,7 +138,7 @@ class MockInterviewSession(Base):
             "sessionType": self.session_type,
             "timeLimitMinutes": self.time_limit_minutes,
             "numProblems": self.num_problems,
-            "difficulties": json.loads(self.difficulties) if self.difficulties else [],  # type: ignore[arg-type]
+            "difficulties": json.loads(self.difficulties) if self.difficulties else [],  # type: ignore
             "problemsCompleted": self.problems_completed,
             "totalScore": self.total_score,
         }
@@ -166,7 +166,7 @@ class StudyPlan(Base):
             "userId": self.user_id,
             "createdAt": self.created_at.isoformat() if self.created_at else None,
             "weekNumber": self.week_number,
-            "focusPatterns": json.loads(self.focus_patterns)  # type: ignore[arg-type]
+            "focusPatterns": json.loads(self.focus_patterns)  # type: ignore
             if self.focus_patterns
             else [],
             "dailyGoal": self.daily_goal,
@@ -209,7 +209,7 @@ def calculate_next_review(attempt: ProblemAttempt, was_correct: bool) -> datetim
     Calculate next review date using SM-2 algorithm variant.
     """
     if was_correct:
-        new_interval = int(attempt.review_interval_days * attempt.ease_factor)  # type: ignore[arg-type]
+        new_interval = int(attempt.review_interval_days * attempt.ease_factor)  # type: ignore
         new_ease = min(2.5, attempt.ease_factor + 0.1)
     else:
         new_interval = 1  # Reset to 1 day

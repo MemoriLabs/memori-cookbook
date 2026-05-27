@@ -139,7 +139,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Wellness Coach API", lifespan=lifespan)
 
 app.add_middleware(
-    CORSMiddleware,  # type: ignore[arg-type]
+    CORSMiddleware,  # type: ignore
     allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
