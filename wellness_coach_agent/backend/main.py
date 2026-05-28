@@ -87,32 +87,56 @@ class UsageResponse(BaseModel):
     success: bool = True
 
 
+def _resolve_provider_api_key(
+    openai_key_override: str | None = None,
+) -> tuple[str, str]:
+    """Return (provider, api_key) based on LLM_PROVIDER env and request override."""
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    if provider == "gemini":
+        api_key = os.getenv("GEMINI_API_KEY", "")
+    elif provider == "claude":
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    else:
+        provider = "openai"
+        api_key = (openai_key_override or "").strip() or os.getenv("OPENAI_API_KEY", "")
+    return provider, api_key
+
+
+def _resolve_model_name(provider: str) -> str:
+    if provider == "gemini":
+        return os.getenv("WELLNESS_MODEL") or os.getenv(
+            "GEMINI_MODEL", "gemini-2.0-flash-exp"
+        )
+    if provider == "claude":
+        return os.getenv("WELLNESS_MODEL") or os.getenv(
+            "ANTHROPIC_MODEL", "claude-3-5-haiku-20241022"
+        )
+    return os.getenv("WELLNESS_MODEL", "gpt-4o-mini")
+
+
 def _get_memori_manager(
     user_id: str,
     openai_key_override: str | None = None,
     memori_key_override: str | None = None,
 ) -> MemoriManager:
-    """
-    Create a MemoriManager for the given logical user id.
-    """
+    """Create a MemoriManager for the given logical user id."""
     user_id = (user_id or "").strip()
     if not user_id:
         raise HTTPException(status_code=400, detail="userId must be non-empty.")
 
-    # Prefer user-provided key, else fall back to environment
-    openai_key = (openai_key_override or "").strip() or os.getenv("OPENAI_API_KEY", "")
-    if not openai_key:
+    provider, api_key = _resolve_provider_api_key(openai_key_override)
+    if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="No OpenAI API key available. Provide your own or configure OPENAI_API_KEY on the backend.",
+            detail=f"No API key for provider '{provider}'. Configure the appropriate env var.",
         )
 
-    mgr = MemoriManager(
-        openai_api_key=openai_key,
+    return MemoriManager(
+        api_key=api_key,
+        provider=provider,
         sqlite_path=os.getenv("WELLNESS_SQLITE_PATH") or "./memori_wellness.sqlite",
         entity_id=user_id,
     )
-    return mgr
 
 
 # Configure logging
@@ -370,15 +394,15 @@ def generate_plan(req: GeneratePlanRequest) -> dict:
     except Exception:
         weakness_context = ""
 
-    model_name = os.getenv("WELLNESS_MODEL", "gpt-4o-mini")
-    # Get API key from request or environment
-    api_key = req.openaiKey or os.getenv("OPENAI_API_KEY")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     plan_result = generate_wellness_plan(
         profile=req.profile,
         habit_history=habit_history,
         weakness_context=weakness_context,
         model_name=model_name,
         api_key=api_key,
+        provider=provider,
     )
 
     # Save plan to database
@@ -522,15 +546,15 @@ def conduct_checkin(req: WeeklyCheckInRequest) -> dict:
     finally:
         db.close()
 
-    model_name = os.getenv("WELLNESS_MODEL", "gpt-4o-mini")
-    # Get API key from request or environment
-    api_key = req.openaiKey or os.getenv("OPENAI_API_KEY")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     checkin_result = conduct_weekly_checkin(
         profile=req.profile,
         habit_history=habit_history,
         previous_plan=previous_plan,
         model_name=model_name,
         api_key=api_key,
+        provider=provider,
     )
 
     # Calculate summary metrics

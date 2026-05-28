@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session, sessionmaker
 
 load_dotenv()
 
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 # Lazy imports to reduce memory at startup
 if TYPE_CHECKING:
     pass
@@ -15,10 +17,10 @@ if TYPE_CHECKING:
 
 class MemoriManager:
     """
-    Thin wrapper around Memori + OpenAI client + SQLite (via SQLAlchemy).
+    Thin wrapper around Memori + LLM client + SQLite (via SQLAlchemy).
 
-    This version is intentionally SQLite-only to keep deployment simple and
-    aligned with the project requirements for the Wellness Coach agent.
+    Supports OpenAI, Gemini (via OpenAI-compatible endpoint), and Claude.
+    Set provider via the `provider` argument or LLM_PROVIDER env var.
     """
 
     def __init__(
@@ -27,17 +29,30 @@ class MemoriManager:
         sqlite_path: str | None = None,
         entity_id: str = "wellness-user",
         process_id: str = "wellness-coach",
+        provider: str | None = None,
+        api_key: str | None = None,
     ) -> None:
-        # Lazy import heavy dependencies to reduce memory at startup
         from memori import Memori
-        from openai import OpenAI
 
-        # Resolve OpenAI key
-        openai_key = openai_api_key or os.getenv("OPENAI_API_KEY", "")
-        if not openai_key:
-            raise RuntimeError("OPENAI_API_KEY is not set – cannot initialize Memori.")
+        # Resolve provider
+        self._provider = (provider or os.getenv("LLM_PROVIDER", "openai")).lower()
 
-        # Resolve SQLite path (env override allowed, but backend is always SQLite)
+        # Resolve API key (api_key > openai_api_key > env)
+        _api_key = api_key or openai_api_key
+        if not _api_key:
+            if self._provider == "gemini":
+                _api_key = os.getenv("GEMINI_API_KEY", "")
+            elif self._provider == "claude":
+                _api_key = os.getenv("ANTHROPIC_API_KEY", "")
+            else:
+                _api_key = os.getenv("OPENAI_API_KEY", "")
+        if not _api_key:
+            raise RuntimeError(
+                f"No API key for provider '{self._provider}'. "
+                "Set OPENAI_API_KEY, GEMINI_API_KEY, or ANTHROPIC_API_KEY."
+            )
+
+        # Resolve SQLite path (env override allowed)
         db_path = (
             sqlite_path
             or os.getenv("WELLNESS_SQLITE_PATH")
@@ -52,7 +67,6 @@ class MemoriManager:
             connect_args={"check_same_thread": False},
         )
 
-        # Optional connectivity check + ensure our own helper table exists.
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
             conn.execute(
@@ -72,87 +86,104 @@ class MemoriManager:
             bind=engine,
         )
 
-        client = OpenAI(api_key=openai_key)
-        mem = Memori(conn=self.SessionLocal).openai.register(client)
+        # Initialize provider-specific client + register with Memori
+        if self._provider == "claude":
+            from anthropic import Anthropic
+
+            claude_client = Anthropic(api_key=_api_key)
+            mem = Memori(conn=self.SessionLocal).anthropic.register(claude_client)
+            self._claude_client = claude_client
+            self._openai_client = None
+        else:
+            from openai import OpenAI
+
+            if self._provider == "gemini":
+                openai_client = OpenAI(api_key=_api_key, base_url=GEMINI_BASE_URL)
+            else:
+                openai_client = OpenAI(api_key=_api_key)
+            mem = Memori(conn=self.SessionLocal).openai.register(openai_client)
+            self._openai_client = openai_client
+            self._claude_client = None
+
         mem.attribution(entity_id=entity_id, process_id=process_id)
         if mem.config.storage is not None:
             mem.config.storage.build()
 
         self.memori: Memori = mem
-        self.openai_client: OpenAI = client
+        # Backward compat alias
+        self.openai_client = self._openai_client
         self.sqlite_path = db_path
         self.entity_id = entity_id
+
+    def _default_model(self) -> str:
+        if self._provider == "gemini":
+            return os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+        if self._provider == "claude":
+            return os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+        return os.getenv("WELLNESS_MODEL", "gpt-4o-mini")
+
+    def _chat(self, system: str, user: str) -> str:
+        """Unified LLM completion across OpenAI, Gemini, and Claude."""
+        model = self._default_model()
+        if self._provider == "claude":
+            assert self._claude_client is not None
+            response = self._claude_client.messages.create(
+                model=model,
+                max_tokens=2048,
+                system=system,
+                messages=[{"role": "user", "content": user}],
+            )
+            return response.content[0].text
+        assert self._openai_client is not None
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": user})
+        response = self._openai_client.chat.completions.create(
+            model=model,
+            messages=messages,
+        )
+        return response.choices[0].message.content or ""
 
     def get_db(self) -> Session:
         return self.SessionLocal()
 
-    # ---- High-level helpers for the Wellness Coach demo ----
-
     def log_wellness_profile(self, profile_data: dict[str, Any]) -> None:
-        """
-        Store a structured wellness profile in Memori via a tagged JSON payload.
-
-        The tag `WELLNESS_PROFILE` is used so we can later search specifically
-        for profile documents.
-        """
+        """Store a structured wellness profile in Memori."""
         payload = {
             "type": "wellness_profile",
             "version": 1,
             "profile": profile_data,
         }
         tagged_text = "WELLNESS_PROFILE " + json.dumps(payload, ensure_ascii=False)
-
-        # Send via the registered OpenAI client so Memori can capture it.
-        self.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": (
-                        "Store the following wellness profile document in long-term memory "
-                        "so it can be recalled later:\n\n"
-                        f"{tagged_text}"
-                    ),
-                },
-            ],
+        self._chat(
+            system="",
+            user=(
+                "Store the following wellness profile document in long-term memory "
+                "so it can be recalled later:\n\n"
+                f"{tagged_text}"
+            ),
         )
 
-        # Best-effort explicit commit
         try:
             adapter = getattr(self.memori.config.storage, "adapter", None)
             if adapter is not None and hasattr(adapter, "commit"):
                 adapter.commit()
         except Exception:
-            # Non-fatal; Memori should still persist in most configurations.
             pass
 
     def log_daily_habit(self, habit_summary: str) -> None:
-        """
-        Store one daily habit log entry (sleep, exercise, nutrition, mood).
-
-        The summary should embed useful signals about:
-        - Daily metrics and patterns
-        - Correlations between different habits
-        - Trends over time
-        """
-        system_prompt = (
-            "The following text describes one day's wellness habit log for "
-            "this user (sleep, exercise, nutrition, mood metrics). "
-            "Extract and remember patterns, correlations, and trends that can "
-            "help identify what works best for this user's wellness journey."
-        )
-        self.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": habit_summary,
-                },
-            ],
+        """Store one daily habit log entry (sleep, exercise, nutrition, mood)."""
+        self._chat(
+            system=(
+                "The following text describes one day's wellness habit log for "
+                "this user (sleep, exercise, nutrition, mood metrics). "
+                "Extract and remember patterns, correlations, and trends that can "
+                "help identify what works best for this user's wellness journey."
+            ),
+            user=habit_summary,
         )
 
-        # Best-effort explicit commit
         try:
             adapter = getattr(self.memori.config.storage, "adapter", None)
             if adapter is not None and hasattr(adapter, "commit"):
@@ -161,39 +192,21 @@ class MemoriManager:
             pass
 
     def summarize_wellness_performance(self, question: str) -> str:
-        """
-        Ask Memori/LLM to summarize the user's wellness performance.
-
-        Example questions:
-        - "What are my weakest wellness areas?"
-        - "How has my sleep improved over the last month?"
-        - "What correlations exist between my habits?"
-        """
-        system_prompt = (
-            "You are an AI wellness coach with long-term memory about the "
-            "user's past wellness habit logs and profile. "
-            "Answer the user's question using those memories. Focus on:\n"
-            "- Patterns in sleep, exercise, nutrition, and mood.\n"
-            "- Correlations between different wellness metrics.\n"
-            "- Trends over time and specific, actionable recommendations."
+        """Ask Memori/LLM to summarize the user's wellness performance."""
+        return self._chat(
+            system=(
+                "You are an AI wellness coach with long-term memory about the "
+                "user's past wellness habit logs and profile. "
+                "Answer the user's question using those memories. Focus on:\n"
+                "- Patterns in sleep, exercise, nutrition, and mood.\n"
+                "- Correlations between different wellness metrics.\n"
+                "- Trends over time and specific, actionable recommendations."
+            ),
+            user=question,
         )
-        response = self.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question},
-            ],
-        )
-        return response.choices[0].message.content or ""
 
     def get_latest_wellness_profile(self) -> dict[str, Any] | None:
-        """
-        Attempt to retrieve the most recently stored wellness profile from Memori.
-
-        Uses Memori's recall API, which respects the current attribution
-        (entity_id / process_id / session) so profiles remain isolated per
-        logical "user" in a multi-tenant app.
-        """
+        """Retrieve the most recently stored wellness profile from Memori."""
         recall_fn = getattr(self.memori, "recall", None)
         if recall_fn is None:
             return None
@@ -204,7 +217,6 @@ class MemoriManager:
             return None
 
         for r in results:
-            # mem.recall typically returns dicts with a 'content' field
             if isinstance(r, dict):
                 text = str(r.get("content") or "")
             else:
@@ -230,9 +242,7 @@ class MemoriManager:
         return None
 
     def identify_weaknesses(self) -> str:
-        """
-        Query Memori to identify wellness weaknesses and opportunities.
-        """
+        """Query Memori to identify wellness weaknesses and opportunities."""
         question = (
             "In 3–5 bullet points, summarize my weakest wellness areas and "
             "opportunities for improvement based on my habit history."

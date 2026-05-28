@@ -1,10 +1,54 @@
+import os
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 # Lazy imports for heavy dependencies
 if TYPE_CHECKING:
     pass
+
+
+def _run_agent_prompt(
+    prompt: str,
+    model_name: str,
+    api_key: str | None,
+    provider: str,
+) -> str:
+    """Run a single-turn LLM prompt using the specified provider."""
+    if provider == "claude":
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY", ""))
+        response = client.messages.create(
+            model=model_name,
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text
+    if provider == "gemini":
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=api_key or os.getenv("GEMINI_API_KEY", ""),
+            base_url=GEMINI_BASE_URL,
+        )
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content or ""
+    # Default: OpenAI via Agno
+    from agno.agent import Agent
+    from agno.models.openai import OpenAIChat
+
+    model_kwargs: dict[str, Any] = {"id": model_name}
+    if api_key:
+        model_kwargs["api_key"] = api_key
+    agent = Agent(model=OpenAIChat(**model_kwargs), markdown=False)
+    result = agent.run(prompt)
+    return str(getattr(result, "content", result))
 
 
 class WellnessProfile(BaseModel):
@@ -77,6 +121,7 @@ def generate_wellness_plan(
     weakness_context: str | None = None,
     model_name: str = "gpt-4o-mini",
     api_key: str | None = None,
+    provider: str = "openai",
 ) -> WellnessPlanResult:
     """
     Use LangGraph to generate a personalized wellness plan.
@@ -88,8 +133,6 @@ def generate_wellness_plan(
     4. Create daily goals and weekly objectives
     """
     # Lazy import heavy dependencies
-    from agno.agent import Agent
-    from agno.models.openai import OpenAIChat
 
     # Build context from habit history
     habit_summary = ""
@@ -144,18 +187,7 @@ Respond using the following JSON structure:
 }}
 """
 
-    # Set API key if provided
-    model_kwargs = {"id": model_name}
-    if api_key:
-        model_kwargs["api_key"] = api_key
-
-    agent = Agent(
-        name="Wellness Plan Generator",
-        model=OpenAIChat(**model_kwargs),
-        markdown=False,
-    )
-    result = agent.run(prompt)
-    text = str(getattr(result, "content", result))
+    text = _run_agent_prompt(prompt, model_name, api_key, provider)
 
     # Parse JSON response
     import json
@@ -217,6 +249,7 @@ def conduct_weekly_checkin(
     previous_plan: dict[str, Any] | None = None,
     model_name: str = "gpt-4o-mini",
     api_key: str | None = None,
+    provider: str = "openai",
 ) -> CheckInResult:
     """
     Conduct a weekly check-in assessment using LangGraph.
@@ -227,10 +260,6 @@ def conduct_weekly_checkin(
     3. Assesses progress against the wellness plan
     4. Generates recommendations for the next week
     """
-    # Lazy import heavy dependencies
-    from agno.agent import Agent
-    from agno.models.openai import OpenAIChat
-
     # Build habit summary
     if not habit_history:
         habit_summary = "No habit data available for this week."
@@ -303,17 +332,7 @@ Respond using the following JSON structure:
 """
 
     # Set API key if provided
-    model_kwargs = {"id": model_name}
-    if api_key:
-        model_kwargs["api_key"] = api_key
-
-    agent = Agent(
-        name="Weekly Check-In Assessor",
-        model=OpenAIChat(**model_kwargs),
-        markdown=False,
-    )
-    result = agent.run(prompt)
-    text = str(getattr(result, "content", result))
+    text = _run_agent_prompt(prompt, model_name, api_key, provider)
 
     # Parse JSON response
     import json
@@ -354,14 +373,11 @@ def identify_correlations(
     habit_history: list[dict[str, Any]],
     model_name: str = "gpt-4o-mini",
     api_key: str | None = None,
+    provider: str = "openai",
 ) -> list[dict[str, Any]]:
     """
     Use AI to identify correlations between different wellness metrics.
     """
-    # Lazy import heavy dependencies
-    from agno.agent import Agent
-    from agno.models.openai import OpenAIChat
-
     if len(habit_history) < 7:
         return []  # Need at least a week of data
 
@@ -406,18 +422,7 @@ Respond in JSON format:
 }}
 """
 
-    # Set API key if provided
-    model_kwargs = {"id": model_name}
-    if api_key:
-        model_kwargs["api_key"] = api_key
-
-    agent = Agent(
-        name="Correlation Analyzer",
-        model=OpenAIChat(**model_kwargs),
-        markdown=False,
-    )
-    result = agent.run(prompt)
-    text = str(getattr(result, "content", result))
+    text = _run_agent_prompt(prompt, model_name, api_key, provider)
 
     import json
     import re

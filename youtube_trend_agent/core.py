@@ -24,6 +24,8 @@ from sqlalchemy.orm import sessionmaker
 
 load_dotenv()
 
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 
 class _SilentLogger:
     """Minimal logger for yt-dlp that suppresses debug/warning output."""
@@ -38,19 +40,14 @@ class _SilentLogger:
         pass
 
 
-def init_memori_with_openai() -> Memori | None:
+def init_memori(provider: str = "openai", api_key: str = "") -> Memori | None:
     """
-    Initialize Memori v3 + OpenAI client, mirroring the customer_support/ai_consultant pattern.
+    Initialize Memori v3 with the specified LLM provider.
 
-    This is used so Memori can automatically persist "memories" when we send
-    documents through the registered OpenAI client. Agno + OpenAIChat power all
-    YouTube analysis and idea generation.
+    Supports OpenAI, Gemini (via OpenAI-compatible endpoint), and Claude.
     """
-    openai_key = os.getenv("OPENAI_API_KEY", "")
-    if not openai_key:
-        st.warning(
-            "OPENAI_API_KEY is not set – Memori v3 ingestion will not be active."
-        )
+    if not api_key:
+        st.warning(f"API key for '{provider}' is not set – Memori ingestion inactive.")
         return None
 
     try:
@@ -62,21 +59,33 @@ def init_memori_with_openai() -> Memori | None:
             connect_args={"check_same_thread": False},
         )
 
-        # Optional DB connectivity check
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
 
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-        client = OpenAI(api_key=openai_key)
-        mem = Memori(conn=SessionLocal).openai.register(client)
-        # Attribution so Memori can attach memories to this process/entity.
+        if provider == "claude":
+            from anthropic import Anthropic
+
+            claude_client = Anthropic(api_key=api_key)
+            mem = Memori(conn=SessionLocal).anthropic.register(claude_client)
+            st.session_state.claude_client = claude_client
+            st.session_state.openai_client = None
+        else:
+            if provider == "gemini":
+                client = OpenAI(api_key=api_key, base_url=GEMINI_BASE_URL)
+            else:
+                client = OpenAI(api_key=api_key)
+            mem = Memori(conn=SessionLocal).openai.register(client)
+            st.session_state.openai_client = client
+            st.session_state.claude_client = None
+
         mem.attribution(entity_id="youtube-channel", process_id="youtube-trend-agent")
         if mem.config.storage is not None:
             mem.config.storage.build()
 
         st.session_state.memori = mem
-        st.session_state.openai_client = client
+        st.session_state.llm_provider = provider
         return mem
     except Exception as e:
         st.warning(f"Memori v3 initialization note: {e}")
@@ -230,16 +239,29 @@ def ingest_channel_into_memori(channel_url: str) -> int:
     Returns:
         Number of video documents ingested.
     """
-    # Ensure Memori + OpenAI client are initialized
     memori: Memori | None = st.session_state.get("memori")
-    client: OpenAI | None = st.session_state.get("openai_client")
-    if memori is None or client is None:
-        memori = init_memori_with_openai()
-        client = st.session_state.get("openai_client")
+    provider: str = st.session_state.get("llm_provider") or "openai"
+    openai_client: OpenAI | None = st.session_state.get("openai_client")
+    claude_client = st.session_state.get("claude_client")
 
-    if memori is None or client is None:
-        st.error("Memori/OpenAI failed to initialize; cannot ingest channel.")
+    if memori is None:
+        api_key = st.session_state.get("api_key", "")
+        memori = init_memori(provider=provider, api_key=api_key)
+        openai_client = st.session_state.get("openai_client")
+        claude_client = st.session_state.get("claude_client")
+
+    if memori is None:
+        st.error("Memori failed to initialize; cannot ingest channel.")
         return 0
+
+    if provider == "claude":
+        if claude_client is None:
+            st.error("Claude client not initialized; cannot ingest channel.")
+            return 0
+    else:
+        if openai_client is None:
+            st.error("OpenAI/Gemini client not initialized; cannot ingest channel.")
+            return 0
 
     videos = fetch_channel_videos(channel_url)
     if not videos:
@@ -288,26 +310,31 @@ Description:
 {desc_snippet}
 """
 
+        ingest_prompt = (
+            "Store the following YouTube video metadata in memory "
+            "for future channel-trend analysis. Respond with a short "
+            f"acknowledgement only.\n\n{doc_text}"
+        )
         try:
-            # Send this document through the registered OpenAI client so that
-            # Memori v3 can automatically capture it as a "memory".
-            _ = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": (
-                            "Store the following YouTube video metadata in memory "
-                            "for future channel-trend analysis. Respond with a short "
-                            "acknowledgement only.\n\n"
-                            f"{doc_text}"
-                        ),
-                    }
-                ],
-            )
+            if provider == "claude":
+                _ = claude_client.messages.create(  # type: ignore
+                    model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022"),
+                    max_tokens=128,
+                    messages=[{"role": "user", "content": ingest_prompt}],
+                )
+            else:
+                model = (
+                    os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+                    if provider == "gemini"
+                    else "gpt-4o-mini"
+                )
+                _ = openai_client.chat.completions.create(  # type: ignore
+                    model=model,
+                    messages=[{"role": "user", "content": ingest_prompt}],
+                )
             ingested += 1
         except Exception as e:
-            st.warning(f"Memori/OpenAI issue ingesting video '{title}': {e}")
+            st.warning(f"Memori ingestion issue for video '{title}': {e}")
 
     # Flush writes if needed
     try:

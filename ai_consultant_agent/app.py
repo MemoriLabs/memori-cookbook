@@ -1,6 +1,7 @@
 """
 AI Consultant Agent with Memori
 Streamlit interface for AI readiness assessment + memory-powered follow-ups.
+Supports OpenAI, Google Gemini, and Anthropic Claude as LLM backends.
 """
 
 import base64
@@ -12,22 +13,32 @@ from memori import Memori
 from openai import OpenAI
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from workflow import CompanyProfile, run_ai_assessment
+from workflow import CompanyProfile, _llm_completion, run_ai_assessment
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
-# Load environment variables
 load_dotenv()
 
-# Page config
-st.set_page_config(
-    page_title="AI Consultant Agent",
-    layout="wide",
-)
+st.set_page_config(page_title="AI Consultant Agent", layout="wide")
+
+_PROVIDER_LABELS = {
+    "openai": "OpenAI",
+    "gemini": "Google Gemini",
+    "claude": "Anthropic Claude",
+}
+_PROVIDER_KEY_ENV = {
+    "openai": "OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "claude": "ANTHROPIC_API_KEY",
+}
+_PROVIDER_KEY_LABELS = {
+    "openai": "OpenAI API Key",
+    "gemini": "Gemini API Key",
+    "claude": "Anthropic API Key",
+}
 
 
 def _load_inline_image(path: str, height_px: int) -> str:
-    """Return an inline <img> tag for a local PNG, or empty string on failure."""
     try:
         with open(path, "rb") as f:
             encoded = base64.b64encode(f.read()).decode()
@@ -40,7 +51,6 @@ def _load_inline_image(path: str, height_px: int) -> str:
         return ""
 
 
-# Reuse existing logos from other agents
 memori_img_inline = _load_inline_image("assets/Memori_Logo.png", height_px=90)
 tavily_img_inline = _load_inline_image("assets/tavily_logo.png", height_px=70)
 
@@ -55,15 +65,68 @@ title_html = f"""
 """
 st.markdown(title_html, unsafe_allow_html=True)
 
-# Sidebar
+
+def _init_memori(provider: str, api_key: str) -> None:
+    """Initialize Memori + LLM client and store both in session state."""
+    if not api_key:
+        st.warning(
+            f"{_PROVIDER_KEY_LABELS[provider]} is not set – Memori will not be active."
+        )
+        return
+    try:
+        db_path = os.getenv("SQLITE_DB_PATH", "./memori.sqlite")
+        engine = create_engine(
+            f"sqlite:///{db_path}",
+            pool_pre_ping=True,
+            connect_args={"check_same_thread": False},
+        )
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+        if provider == "claude":
+            from anthropic import Anthropic
+
+            claude_client = Anthropic(api_key=api_key)
+            mem = Memori(conn=SessionLocal).anthropic.register(claude_client)
+            st.session_state.claude_client = claude_client
+            st.session_state.openai_client = None
+        else:
+            if provider == "gemini":
+                client = OpenAI(api_key=api_key, base_url=GEMINI_BASE_URL)
+            else:
+                client = OpenAI(api_key=api_key)
+            mem = Memori(conn=SessionLocal).openai.register(client)
+            st.session_state.openai_client = client
+            st.session_state.claude_client = None
+
+        mem.attribution(entity_id="ai-consultant-user", process_id="ai-consultant")
+        if mem.config.storage is not None:
+            mem.config.storage.build()
+
+        st.session_state.memori = mem
+        st.session_state.llm_provider = provider
+        st.session_state.api_key = api_key
+    except Exception as e:
+        st.warning(f"Memori initialization note: {e}")
+
+
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.subheader("🔑 API Keys")
 
-    openai_api_key_input = st.text_input(
-        "Gemini API Key",
-        value=os.getenv("GEMINI_API_KEY", ""),
+    provider = st.selectbox(
+        "LLM Provider",
+        options=["openai", "gemini", "claude"],
+        format_func=lambda p: _PROVIDER_LABELS[p],
+        index=0,
+    )
+
+    env_key = _PROVIDER_KEY_ENV[provider]
+    api_key_input = st.text_input(
+        _PROVIDER_KEY_LABELS[provider],
+        value=os.getenv(env_key, ""),
         type="password",
-        help="Your Gemini API key for the consultant LLM (Memori v3 will register this client).",
     )
 
     memori_api_key_input = st.text_input(
@@ -81,20 +144,17 @@ with st.sidebar:
     )
 
     if st.button("Save API Keys"):
-        if openai_api_key_input:
-            os.environ["GEMINI_API_KEY"] = openai_api_key_input
+        if api_key_input:
+            os.environ[env_key] = api_key_input
         if memori_api_key_input:
             os.environ["MEMORI_API_KEY"] = memori_api_key_input
         if tavily_api_key_input:
             os.environ["TAVILY_API_KEY"] = tavily_api_key_input
-        if openai_api_key_input or tavily_api_key_input or memori_api_key_input:
-            st.success("✅ API keys saved for this session")
-        else:
-            st.warning("Please enter at least one API key")
+        _init_memori(provider, api_key_input)
+        st.success("✅ API keys saved for this session")
 
-    both_keys_present = bool(os.getenv("TAVILY_API_KEY")) and bool(
-        os.getenv("GEMINI_API_KEY")
-    )
+    effective_key = api_key_input or os.getenv(env_key, "")
+    both_keys_present = bool(os.getenv("TAVILY_API_KEY")) and bool(effective_key)
     if both_keys_present:
         st.caption("Both API keys detected ✅")
     else:
@@ -108,9 +168,9 @@ with st.sidebar:
         - Assesses *AI readiness* and where to integrate AI.
         - Suggests *use cases* across workforce, tools, and ecosystem.
         - Provides rough *cost bands* and risks.
-        - Uses *Memori* + to remember past assessments and Q&A.
+        - Uses *Memori* to remember past assessments and Q&A.
 
-        Web research is powered by *Tavily*, and reasoning is powered by **Gemini** via Memori.
+        Web research is powered by *Tavily*. Supports **OpenAI**, **Gemini**, and **Claude**.
 
         ---
 
@@ -118,63 +178,34 @@ with st.sidebar:
         """
     )
 
-# Get API keys from environment
-tavily_key = os.getenv("TAVILY_API_KEY", "")
-
-# Initialize session state
+# ── Session state init ────────────────────────────────────────────────────────
 if "assessment_markdown" not in st.session_state:
     st.session_state.assessment_markdown = None
-
 if "company_profile" not in st.session_state:
     st.session_state.company_profile = None
-
 if "memory_messages" not in st.session_state:
     st.session_state.memory_messages = []
 
-# Initialize Memori v3 + Gemini client (once)
-if "openai_client" not in st.session_state:
-    openai_key = os.getenv("GEMINI_API_KEY", "")
-    if not openai_key:
-        st.warning("GEMINI_API_KEY is not set – Memori v3 will not be active.")
-    else:
-        try:
-            db_path = os.getenv("SQLITE_DB_PATH", "./memori.sqlite")
-            database_url = f"sqlite:///{db_path}"
-            engine = create_engine(
-                database_url,
-                pool_pre_ping=True,
-                connect_args={"check_same_thread": False},
-            )
-            # Optional DB connectivity check
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
+# Initialize Memori once on first load
+if "memori" not in st.session_state:
+    initial_key = api_key_input or os.getenv(env_key, "")
+    if initial_key:
+        _init_memori(provider, initial_key)
 
-            SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-            client = OpenAI(api_key=openai_key, base_url=GEMINI_BASE_URL)
-            mem = Memori(conn=SessionLocal).openai.register(client)
-            # Basic attribution so Memori can attach memories
-            mem.attribution(entity_id="ai-consultant-user", process_id="ai-consultant")
-            if mem.config.storage is not None:
-                mem.config.storage.build()
-
-            st.session_state.memori = mem
-            st.session_state.openai_client = client
-        except Exception as e:
-            st.warning(f"Memori v3 initialization note: {str(e)}")
-
-# Check if keys are set for required services
+# ── Guards ────────────────────────────────────────────────────────────────────
+tavily_key = os.getenv("TAVILY_API_KEY", "")
 if not tavily_key:
     st.warning("⚠️ Please enter your Tavily API key in the sidebar to run assessments!")
     st.stop()
-if "openai_client" not in st.session_state:
+
+effective_key = api_key_input or os.getenv(env_key, "")
+if not effective_key:
     st.warning(
-        "⚠️ GEMINI_API_KEY missing or Memori v3 failed to initialize – "
-        "LLM responses will not work."
+        f"⚠️ {_PROVIDER_KEY_LABELS[provider]} missing – LLM responses will not work."
     )
     st.stop()
 
-# Tabs: Assessment + Memory
+# ── Tabs ──────────────────────────────────────────────────────────────────────
 tab1, tab2 = st.tabs(["📊 AI Assessment", "🧠 Memory"])
 
 with tab1:
@@ -182,31 +213,19 @@ with tab1:
 
     col1, col2 = st.columns([2, 1])
     with col1:
-        company_name = st.text_input(
-            "Company Name *",
-            placeholder="e.g., Acme Corp",
-            help="The company you are assessing",
-        )
+        company_name = st.text_input("Company Name *", placeholder="e.g., Acme Corp")
         industry = st.text_input(
-            "Industry *",
-            placeholder="e.g., Retail, Fintech, Manufacturing",
-            help="Primary industry or sector",
+            "Industry *", placeholder="e.g., Retail, Fintech, Manufacturing"
         )
         region = st.text_input(
-            "Region / Market",
-            placeholder="e.g., US, EU, Global, APAC",
-            help="Where the company primarily operates",
+            "Region / Market", placeholder="e.g., US, EU, Global, APAC"
         )
     with col2:
         company_size = st.selectbox(
-            "Company Size *",
-            options=["1-50", "51-200", "201-1000", "1000+"],
-            help="Rough employee headcount band",
+            "Company Size *", options=["1-50", "51-200", "201-1000", "1000+"]
         )
         tech_maturity = st.selectbox(
-            "Tech & Data Maturity *",
-            options=["Low", "Medium", "High"],
-            help="How mature is their data/engineering stack?",
+            "Tech & Data Maturity *", options=["Low", "Medium", "High"]
         )
 
     goals = st.multiselect(
@@ -219,9 +238,7 @@ with tab1:
             "Risk & compliance",
             "Innovation / new products",
         ],
-        help="What is leadership trying to achieve with AI?",
     )
-
     ai_focus_areas = st.multiselect(
         "AI Focus Areas",
         options=[
@@ -231,7 +248,6 @@ with tab1:
             "Product features",
             "Partner ecosystem / APIs",
         ],
-        help="Where should we consider integrating AI?",
     )
 
     col3, col4 = st.columns(2)
@@ -248,7 +264,7 @@ with tab1:
 
     notes = st.text_area(
         "Additional Notes",
-        placeholder="Any constraints, existing systems, data sources, or regulatory considerations.",
+        placeholder="Any constraints, existing systems, or regulatory considerations.",
         height=120,
     )
 
@@ -277,22 +293,19 @@ with tab1:
                 with st.spinner("🤖 Running AI assessment (research + reasoning)..."):
                     try:
                         assessment_markdown, _snippets = run_ai_assessment(
-                            profile, st.session_state.openai_client
+                            profile,
+                            provider=provider,
+                            api_key=effective_key,
                         )
                         st.session_state.assessment_markdown = assessment_markdown
                         st.session_state.company_profile = profile
-
                         st.markdown(
                             f"## 🧾 AI Readiness & Cost Assessment for *{profile.company_name}*"
                         )
                         st.markdown(assessment_markdown)
-
-                        # With Memori v3, conversations are captured automatically
-                        # via the registered OpenAI client, so no manual recording here.
                     except Exception as e:
                         st.error(f"❌ Error during assessment: {e}")
 
-    # Show last assessment if available and we didn't just run a new one
     if st.session_state.assessment_markdown and not run_assessment:
         st.markdown(
             "### Last Assessment Result "
@@ -345,29 +358,16 @@ with tab2:
                             f"{st.session_state.assessment_markdown[:1500]}\n"
                         )
 
-                    full_prompt = f"""You are an AI consultant assistant with access to:
-1. Stored AI readiness assessments (captured automatically by Memori v3).
-2. The latest assessment in this session (if any).
-
-You can answer questions about:
-- What was previously recommended for a given company or industry.
-- Whether AI was suggested for specific areas (workforce, tools, ecosystem, etc.).
-- Cost bands, risks, and next steps that were advised before.
-- How new questions relate to past assessments.
-
-Use your memory of prior interactions (via Memori) plus the context below:
-{latest_context}
-
-Answer questions helpfully and concisely. If asked outside this scope, politely say you only answer about AI consulting and stored assessments."""
-
-                    response = st.session_state.openai_client.chat.completions.create(
-                        model="models/gemini-2.5-flash",
-                        messages=[
-                            {"role": "system", "content": full_prompt},
-                            {"role": "user", "content": memory_prompt},
-                        ],
+                    system = (
+                        "You are an AI consultant assistant with access to stored AI readiness assessments. "
+                        "Answer questions about past recommendations, cost bands, risks, and next steps. "
+                        "If asked outside this scope, politely say you only answer about AI consulting.\n"
+                        + latest_context
                     )
-                    response_text = response.choices[0].message.content
+
+                    response_text = _llm_completion(
+                        system, memory_prompt, provider, effective_key
+                    )
 
                     st.session_state.memory_messages.append(
                         {"role": "assistant", "content": response_text}
