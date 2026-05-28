@@ -1,14 +1,15 @@
 """
 AI Consultant Workflow
-Uses LangChain for reasoning and Tavily for web/case-study research.
+Uses Tavily for web/case-study research and supports OpenAI, Gemini, and Claude LLMs.
 """
 
 import os
-from typing import Any
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 from tavily import TavilyClient
+
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
 # Load environment variables from .env if present
 load_dotenv()
@@ -125,8 +126,51 @@ def search_ai_case_studies_with_tavily(
     return snippets
 
 
+def _default_model(provider: str) -> str:
+    if provider == "gemini":
+        return os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+    if provider == "claude":
+        return os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+    return os.getenv("CONSULTANT_MODEL", "gpt-4o-mini")
+
+
+def _llm_completion(system: str, user: str, provider: str, api_key: str) -> str:
+    """Route a two-turn completion through the selected LLM provider."""
+    model = _default_model(provider)
+    if provider == "claude":
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY", ""))
+        response = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        return response.content[0].text  # type: ignore
+
+    from openai import OpenAI
+
+    if provider == "gemini":
+        client = OpenAI(
+            api_key=api_key or os.getenv("GEMINI_API_KEY", ""), base_url=GEMINI_BASE_URL
+        )
+    else:
+        client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY", ""))
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    )
+    return response.choices[0].message.content or ""
+
+
 def run_ai_assessment(
-    profile: CompanyProfile, openai_client: Any
+    profile: CompanyProfile,
+    provider: str = "openai",
+    api_key: str = "",
 ) -> tuple[str, list[ResearchSnippet]]:
     """
     Main workflow:
@@ -192,15 +236,10 @@ def run_ai_assessment(
     )
 
     try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+        assessment_markdown = _llm_completion(
+            system_prompt, user_prompt, provider, api_key
         )
     except Exception as e:
         raise RuntimeError(f"Error calling consultant LLM: {e}") from e
 
-    assessment_markdown = response.choices[0].message.content
     return assessment_markdown, research_snippets

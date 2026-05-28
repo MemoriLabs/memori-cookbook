@@ -155,36 +155,56 @@ class CompanyProblemRequest(BaseModel):
     memoriKey: str | None = None
 
 
+def _resolve_provider_api_key(
+    openai_key_override: str | None = None,
+) -> tuple[str, str]:
+    """Return (provider, api_key) based on LLM_PROVIDER env and request override."""
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    if provider == "gemini":
+        api_key = os.getenv("GEMINI_API_KEY", "")
+    elif provider == "claude":
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    else:
+        provider = "openai"
+        api_key = (openai_key_override or "").strip() or os.getenv("OPENAI_API_KEY", "")
+    return provider, api_key
+
+
+def _resolve_model_name(provider: str) -> str:
+    if provider == "gemini":
+        return os.getenv("INTERVIEW_MODEL") or os.getenv(
+            "GEMINI_MODEL", "gemini-2.0-flash-exp"
+        )
+    if provider == "claude":
+        return os.getenv("INTERVIEW_MODEL") or os.getenv(
+            "ANTHROPIC_MODEL", "claude-3-5-haiku-20241022"
+        )
+    return os.getenv("INTERVIEW_MODEL", "gpt-4o-mini")
+
+
 def _get_memori_manager(
     user_id: str,
     openai_key_override: str | None = None,
     memori_key_override: str | None = None,
 ) -> MemoriManager:
-    """
-    Create a MemoriManager for the given logical user id.
-
-    If the caller provides their own OpenAI key, we use that instead of the env var.
-    """
+    """Create a MemoriManager for the given logical user id."""
     user_id = (user_id or "").strip()
     if not user_id:
         raise HTTPException(status_code=400, detail="userId must be non-empty.")
 
-    # Prefer user-provided key, else fall back to environment
-    openai_key = (openai_key_override or "").strip() or os.getenv("OPENAI_API_KEY", "")
-    if not openai_key:
+    provider, api_key = _resolve_provider_api_key(openai_key_override)
+    if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="No OpenAI API key available. Provide your own or configure OPENAI_API_KEY on the backend.",
+            detail=f"No API key for provider '{provider}'. Configure the appropriate env var.",
         )
 
-    # memori_key_override is accepted for future use / Memori cloud features
-    # For now, Memori uses the OpenAI key for embeddings, so we just pass openai_key.
-    mgr = MemoriManager(
-        openai_api_key=openai_key,
+    return MemoriManager(
+        api_key=api_key,
+        provider=provider,
         sqlite_path=os.getenv("INTERVIEW_SQLITE_PATH") or "./memori_interview.sqlite",
         entity_id=user_id,
     )
-    return mgr
 
 
 # Configure logging
@@ -273,49 +293,53 @@ def generate_problem(req: ProblemRequest) -> ProblemMetadata:
     except Exception:
         weakness_context = ""
 
-    model_name = os.getenv("INTERVIEW_MODEL", "gpt-4o-mini")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     problem = generate_personalized_problem(
         profile=req.profile,
         difficulty=req.difficulty,
         patterns=req.patterns,
         weakness_context=weakness_context,
         model_name=model_name,
+        api_key=api_key,
+        provider=provider,
     )
     return problem
 
 
 @app.post("/hint")
 def generate_hint_endpoint(req: HintRequest) -> dict:
-    """
-    Generate an incremental hint for the current attempt.
-    """
+    """Generate an incremental hint for the current attempt."""
     _get_memori_manager(req.userId, req.openaiKey)  # Validate API key
 
-    model_name = os.getenv("INTERVIEW_MODEL", "gpt-4o-mini")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     hint = generate_hint(
         problem=req.problem,
         language=req.language,
         code_so_far=req.codeSoFar,
         hint_index=req.hintIndex,
         model_name=model_name,
+        api_key=api_key,
+        provider=provider,
     )
     return {"hint": hint}
 
 
 @app.post("/evaluate")
 def evaluate_solution_endpoint(req: EvaluateRequest) -> dict:
-    """
-    Evaluate the candidate's solution and log the attempt into Memori.
-    Also saves to database for history/analytics.
-    """
+    """Evaluate the candidate's solution and log the attempt into Memori."""
     mgr = _get_memori_manager(req.userId, req.openaiKey)
 
-    model_name = os.getenv("INTERVIEW_MODEL", "gpt-4o-mini")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     evaluation_md = evaluate_solution(
         problem=req.problem,
         language=req.language,
         candidate_code=req.candidateCode,
         model_name=model_name,
+        api_key=api_key,
+        provider=provider,
     )
 
     attempt_summary = format_attempt_summary(
@@ -807,13 +831,16 @@ def generate_company_problem(req: CompanyProblemRequest) -> ProblemMetadata:
 
     patterns = company_patterns.get(req.company, ["arrays", "strings", "trees"])
 
-    model_name = os.getenv("INTERVIEW_MODEL", "gpt-4o-mini")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     problem = generate_personalized_problem(
         profile=req.profile,
         difficulty=req.difficulty,
         patterns=patterns[:3],  # Focus on top 3 patterns
         weakness_context=f"This problem should be in the style of {req.company} interviews.",
         model_name=model_name,
+        api_key=api_key,
+        provider=provider,
     )
 
     return problem
@@ -871,18 +898,10 @@ Create a day-by-day plan for 7 days with:
 
 Format as markdown."""
 
-        response = mgr.openai_client.chat.completions.create(
-            model=os.getenv("INTERVIEW_MODEL", "gpt-4o-mini"),
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are an expert technical interview coach.",
-                },
-                {"role": "user", "content": prompt},
-            ],
+        plan_markdown = mgr._chat(
+            "You are an expert technical interview coach.",
+            prompt,
         )
-
-        plan_markdown = response.choices[0].message.content or ""
 
         # Save the plan
         plan = StudyPlan(

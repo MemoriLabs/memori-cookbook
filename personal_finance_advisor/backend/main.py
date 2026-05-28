@@ -107,32 +107,56 @@ class UsageResponse(BaseModel):
     success: bool = True
 
 
+def _resolve_provider_api_key(
+    openai_key_override: str | None = None,
+) -> tuple[str, str]:
+    """Return (provider, api_key) based on LLM_PROVIDER env and request override."""
+    provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    if provider == "gemini":
+        api_key = os.getenv("GEMINI_API_KEY", "")
+    elif provider == "claude":
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    else:
+        provider = "openai"
+        api_key = (openai_key_override or "").strip() or os.getenv("OPENAI_API_KEY", "")
+    return provider, api_key
+
+
+def _resolve_model_name(provider: str) -> str:
+    if provider == "gemini":
+        return os.getenv("FINANCE_MODEL") or os.getenv(
+            "GEMINI_MODEL", "gemini-2.0-flash-exp"
+        )
+    if provider == "claude":
+        return os.getenv("FINANCE_MODEL") or os.getenv(
+            "ANTHROPIC_MODEL", "claude-3-5-haiku-20241022"
+        )
+    return os.getenv("FINANCE_MODEL", "gpt-4o-mini")
+
+
 def _get_memori_manager(
     user_id: str,
     openai_key_override: str | None = None,
     memori_key_override: str | None = None,
 ) -> MemoriManager:
-    """
-    Create a MemoriManager for the given logical user id.
-    """
+    """Create a MemoriManager for the given logical user id."""
     user_id = (user_id or "").strip()
     if not user_id:
         raise HTTPException(status_code=400, detail="userId must be non-empty.")
 
-    # Prefer user-provided key, else fall back to environment
-    openai_key = (openai_key_override or "").strip() or os.getenv("OPENAI_API_KEY", "")
-    if not openai_key:
+    provider, api_key = _resolve_provider_api_key(openai_key_override)
+    if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="No OpenAI API key available. Provide your own or configure OPENAI_API_KEY on the backend.",
+            detail=f"No API key for provider '{provider}'. Configure the appropriate env var.",
         )
 
-    mgr = MemoriManager(
-        openai_api_key=openai_key,
+    return MemoriManager(
+        api_key=api_key,
+        provider=provider,
         sqlite_path=os.getenv("FINANCE_SQLITE_PATH") or "./memori_finance.sqlite",
         entity_id=user_id,
     )
-    return mgr
 
 
 # Configure logging
@@ -501,8 +525,8 @@ def conduct_assessment(req: FinancialHealthRequest) -> dict:
     except Exception:
         issues_context = ""
 
-    model_name = os.getenv("FINANCE_MODEL", "gpt-4o-mini")
-    api_key = req.openaiKey or os.getenv("OPENAI_API_KEY")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     assessment_result = conduct_financial_health_assessment(
         profile=req.profile,
         transactions=transaction_history,
@@ -511,6 +535,7 @@ def conduct_assessment(req: FinancialHealthRequest) -> dict:
         spending_issues_context=issues_context,
         model_name=model_name,
         api_key=api_key,
+        provider=provider,
     )
 
     # Save assessment to database
@@ -612,14 +637,15 @@ def generate_goal_plan(req: GoalSettingRequest) -> dict:
     finally:
         db.close()
 
-    model_name = os.getenv("FINANCE_MODEL", "gpt-4o-mini")
-    api_key = req.openaiKey or os.getenv("OPENAI_API_KEY")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     goal_result = generate_goal_setting_plan(
         profile=req.profile,
         transactions=transaction_history,
         current_goals=goal_list,
         model_name=model_name,
         api_key=api_key,
+        provider=provider,
     )
 
     return {
@@ -660,12 +686,13 @@ def identify_recurring(req: FinancialHealthRequest) -> dict:
     finally:
         db.close()
 
-    model_name = os.getenv("FINANCE_MODEL", "gpt-4o-mini")
-    api_key = req.openaiKey or os.getenv("OPENAI_API_KEY")
+    provider, api_key = _resolve_provider_api_key(req.openaiKey)
+    model_name = _resolve_model_name(provider)
     recurring = identify_recurring_expenses(
         transactions=transaction_history,
         model_name=model_name,
         api_key=api_key,
+        provider=provider,
     )
 
     # Save to database
