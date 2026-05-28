@@ -149,7 +149,7 @@ class MemoriManager:
                 system=system,
                 messages=[{"role": "user", "content": user}],
             )
-            return response.content[0].text
+            return response.content[0].text  # type: ignore
         assert self._openai_client is not None
         messages = []
         if system:

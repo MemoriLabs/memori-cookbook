@@ -61,7 +61,7 @@ def _run_chat_prompt(full_prompt: str, provider: str, api_key: str) -> str:
             max_tokens=4096,
             messages=[{"role": "user", "content": full_prompt}],
         )
-        return response.content[0].text  # type: ignore[union-attr]
+        return response.content[0].text  # type: ignore
 
     if provider == "gemini":
         from openai import OpenAI

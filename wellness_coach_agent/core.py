@@ -26,7 +26,7 @@ def _run_agent_prompt(
             max_tokens=4096,
             messages=[{"role": "user", "content": prompt}],
         )
-        return response.content[0].text
+        return response.content[0].text  # type: ignore
     if provider == "gemini":
         from openai import OpenAI
 

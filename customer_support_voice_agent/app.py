@@ -120,7 +120,7 @@ def _llm_completion(system: str, user: str, provider: str, api_key: str) -> str:
             system=system,
             messages=[{"role": "user", "content": user}],
         )
-        return response.content[0].text  # type: ignore[union-attr]
+        return response.content[0].text  # type: ignore
 
     model = (
         os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")

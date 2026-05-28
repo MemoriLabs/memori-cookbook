@@ -4,7 +4,6 @@ Uses Tavily for web/case-study research and supports OpenAI, Gemini, and Claude 
 """
 
 import os
-from typing import Any
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -148,7 +147,7 @@ def _llm_completion(system: str, user: str, provider: str, api_key: str) -> str:
             system=system,
             messages=[{"role": "user", "content": user}],
         )
-        return response.content[0].text  # type: ignore[union-attr]
+        return response.content[0].text  # type: ignore
 
     from openai import OpenAI
 
@@ -170,7 +169,6 @@ def _llm_completion(system: str, user: str, provider: str, api_key: str) -> str:
 
 def run_ai_assessment(
     profile: CompanyProfile,
-    openai_client: Any = None,
     provider: str = "openai",
     api_key: str = "",
 ) -> tuple[str, list[ResearchSnippet]]:
