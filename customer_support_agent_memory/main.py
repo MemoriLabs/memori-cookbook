@@ -1287,7 +1287,7 @@ async def ask(
                 domain_id=domain_id,
                 agent_url=agent_url,
                 agent_access_key=agent_access_key,
-                system_prompt="You are a helpful customer support agent. Use the knowledge base context to answer questions accurately. If you don't know the answer, say so politely.",
+                system_prompt=None,
             ),
         )
 
