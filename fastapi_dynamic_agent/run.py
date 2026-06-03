@@ -22,11 +22,18 @@ def check_env_file():
     # Check if keys are set
     env_content = env_file.read_text()
 
-    if (
-        "sk-your-openai-api-key-here" in env_content
-        or "OPENAI_API_KEY=" not in env_content
-    ):
-        print("⚠️  Warning: OPENAI_API_KEY not set in .env file")
+    has_openai = (
+        "OPENAI_API_KEY=" in env_content
+        and "sk-your-openai-api-key-here" not in env_content
+    )
+    has_google = (
+        "GOOGLE_API_KEY=" in env_content
+        and "your-google-api-key-here" not in env_content
+    )
+    if not has_openai and not has_google:
+        print(
+            "⚠️  Warning: Neither OPENAI_API_KEY nor GOOGLE_API_KEY is set in .env file"
+        )
         print("Get your key from: https://platform.openai.com/api-keys")
         return False
 

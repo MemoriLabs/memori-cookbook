@@ -186,6 +186,7 @@ class MemoriIntegration:
             # We use the clean question (no injected context) so stored facts stay tidy.
             if self.mem.config.augmentation is not None:
                 from memori.memory.augmentation.input import AugmentationInput
+
                 aug_messages = [
                     {"role": "user", "content": question},
                     {"role": "assistant", "content": answer},
