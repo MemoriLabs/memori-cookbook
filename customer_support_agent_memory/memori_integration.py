@@ -161,7 +161,7 @@ class MemoriIntegration:
             # rely on Memori's auto-inject (which inserts a system message).
             recalled_facts = self.mem.recall(question, limit=5)
             if recalled_facts:
-                fact_lines = "\n".join(f"- {f['content']}" for f in recalled_facts)
+                fact_lines = "\n".join(f"- {f['content']}" for f in recalled_facts)  # type: ignore
                 augmented_question = (
                     f"{question}\n\n<memori_context>\n"
                     "Only use the following context if relevant to the query. "
