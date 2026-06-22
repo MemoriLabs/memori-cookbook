@@ -17,12 +17,7 @@ from agents.docs import DocsAgent
 from agents.reviewer import ReviewerAgent
 from agents.tester import TesterAgent
 from core.config import get_settings
-from core.git_context import (
-    get_changed_files,
-    get_context_id,
-    get_current_branch,
-    get_recent_commits,
-)
+from core.git_context import get_context_id
 
 st.set_page_config(page_title="Persistent Memory Dev Agent", layout="wide", page_icon="🧠")
 
@@ -50,7 +45,7 @@ section[data-testid="stSidebar"] > div:first-child {
 }
 section[data-testid="stSidebar"] .stMarkdown h3 {
     color: #5b20e0 !important;
-    font-size: 0.65rem !important;
+    font-size: 0.83rem !important;
     font-weight: 700 !important;
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
@@ -58,20 +53,20 @@ section[data-testid="stSidebar"] .stMarkdown h3 {
 }
 section[data-testid="stSidebar"] label {
     color: #292929 !important;
-    font-size: 0.82rem !important;
+    font-size: 0.83rem !important;
     font-weight: 500 !important;
 }
 section[data-testid="stSidebar"] p,
 section[data-testid="stSidebar"] .stCaption p {
     color: #656565 !important;
-    font-size: 0.78rem !important;
+    font-size: 0.83rem !important;
 }
 section[data-testid="stSidebar"] input {
     background: #faf9ff !important;
     border: 1px solid #ede9fe !important;
     color: #292929 !important;
     border-radius: 7px !important;
-    font-size: 0.82rem !important;
+    font-size: 0.83rem !important;
     font-family: 'Roboto', sans-serif !important;
 }
 section[data-testid="stSidebar"] input:focus {
@@ -97,7 +92,7 @@ section[data-testid="stSidebar"] [data-testid="stCode"] {
 }
 section[data-testid="stSidebar"] [data-testid="stCode"] code {
     color: #712fff !important;
-    font-size: 0.73rem !important;
+    font-size: 0.83rem !important;
 }
 section[data-testid="stSidebar"] hr { border-color: #f3f0ff !important; margin: 0.7rem 0 !important; }
 section[data-testid="stSidebar"] .stButton button {
@@ -105,7 +100,7 @@ section[data-testid="stSidebar"] .stButton button {
     color: #712fff !important;
     border: 1.5px solid #712fff !important;
     border-radius: 7px !important;
-    font-size: 0.82rem !important;
+    font-size: 0.83rem !important;
     font-weight: 600 !important;
     letter-spacing: 0.02em !important;
 }
@@ -188,7 +183,7 @@ section[data-testid="stSidebar"] .stAlert { border-radius: 7px !important; }
 
 /* ─ Typography ─ */
 hr { border-color: #f3f0ff !important; margin: 1.5rem 0 !important; }
-code { font-size: 0.82rem !important; border-radius: 4px !important; }
+code { font-size: 0.83rem !important; border-radius: 4px !important; }
 pre { border-radius: 8px !important; }
 p { font-size: 0.95rem !important; line-height: 1.7 !important; color: #292929 !important; }
 
@@ -198,7 +193,7 @@ div[data-testid="column"] .stButton button:not([kind="primary"]) {
     border: 1.5px solid #ede9fe !important;
     border-radius: 100px !important;
     color: #5b20e0 !important;
-    font-size: 0.78rem !important;
+    font-size: 0.83rem !important;
     font-weight: 500 !important;
     padding: 0.35rem 1rem !important;
     box-shadow: none !important;
@@ -265,19 +260,19 @@ PROVIDER_ENV = {
 }
 
 EXAMPLE_PROMPTS = [
-    "Keep users logged in safely with refresh token rotation",
-    "Make database calls non-blocking for better performance",
-    "Prevent API abuse with per-user rate limits",
-    "Add tracing so we can debug slow or failing requests",
-    "Make the payment endpoint safe to retry without double-charging",
-    "Catch risky database changes before they hit production",
+    "Keep users logged in safely with automatic token refresh",
+    "Stop the API waiting on slow database calls — run them in the background",
+    "Prevent any single user from overwhelming the API with too many requests",
+    "Log every step of a request so bugs and slowdowns are easy to trace",
+    "Make checkout safe to retry without ever charging a customer twice",
+    "Catch dangerous database changes automatically before they reach production",
 ]
 
 AGENT_DESCRIPTIONS = {
-    "Coder":    "Plans the implementation",
-    "Reviewer": "Catches bugs & edge cases",
-    "Tester":   "Writes comprehensive tests",
-    "Docs":     "Writes developer docs",
+    "Coder":    "Plans and writes the code",
+    "Reviewer": "Catches bugs and edge cases",
+    "Tester":   "Writes tests to verify it works",
+    "Docs":     "Writes docs for the team",
 }
 
 
@@ -303,9 +298,35 @@ def apply_keys(
     get_settings.cache_clear()
 
 
+def _token_savings_html(actual: int, naive: int) -> str:
+    ran = actual > 0
+    saved = naive - actual
+    pct = int(saved / naive * 100) if naive else 0
+    return (
+        f'<div style="background:#f3f0ff;border-radius:8px;padding:10px 12px;">'
+        f'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+        f'<span style="font-size:0.83rem;color:#656565;">Sent with Memori</span>'
+        f'<span style="font-size:0.83rem;font-weight:600;color:#292929;">'
+        f'{"—" if not ran else f"{actual:,}"}</span>'
+        f'</div>'
+        f'<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
+        f'<span style="font-size:0.83rem;color:#656565;">Without Memori (est.)</span>'
+        f'<span style="font-size:0.83rem;font-weight:600;color:#989898;">'
+        f'{"—" if not ran else f"{naive:,}"}</span>'
+        f'</div>'
+        f'<div style="border-top:1px solid #ede9fe;padding-top:8px;'
+        f'display:flex;justify-content:space-between;align-items:center;">'
+        f'<span style="font-size:0.83rem;font-weight:700;color:#712fff;">Saved</span>'
+        f'<span style="font-size:0.9rem;font-weight:700;color:#712fff;">'
+        f'{"Run an agent to see" if not ran else f"{pct}% · {saved:,} tokens"}</span>'
+        f'</div>'
+        f'</div>'
+    )
+
+
 def agent_header_html(name: str, emoji: str, color: str, thinking: bool = False) -> str:
     badge = (
-        f'<span style="font-size:0.7rem;color:{color};background:{color}18;'
+        f'<span style="font-size:0.83rem;color:{color};background:{color}18;'
         f'padding:2px 9px;border-radius:100px;font-weight:500;margin-left:6px;">thinking…</span>'
         if thinking else ""
     )
@@ -336,7 +357,7 @@ with st.sidebar:
             <span style="font-size:1.3rem;">🧠</span>
             <span style="font-weight:700;font-size:1rem;color:#0B0C0D;letter-spacing:-0.01em;">Persistent Memory Dev Agent</span>
         </div>
-        <p style="margin:0;font-size:0.72rem;color:#656565;">Multi-agent dev swarm</p>
+        <p style="margin:0;font-size:0.83rem;color:#656565;">Multi-agent dev swarm</p>
     </div>
     """, unsafe_allow_html=True)
     st.divider()
@@ -409,72 +430,12 @@ with st.sidebar:
             selected_agents.append(name)
 
     st.divider()
-    st.markdown("### Current workspace")
-    try:
-        branch  = get_current_branch()
-        commits = get_recent_commits(n=3)
-        changed = get_changed_files()
-
-        # Human-readable branch name: "feat/multi-provider" → "Multi provider"
-        readable_branch = branch.split("/")[-1].replace("-", " ").replace("_", " ").capitalize()
-        st.markdown(
-            f'<div style="font-size:0.8rem;font-weight:600;color:#712fff;'
-            f'background:#f3f0ff;border-radius:6px;padding:5px 10px;margin-bottom:8px;">'
-            f'📁 {readable_branch}</div>',
-            unsafe_allow_html=True,
-        )
-
-        if commits:
-            st.markdown(
-                '<p style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;'
-                'text-transform:uppercase;color:#5b20e0;margin:6px 0 4px;">Recent changes</p>',
-                unsafe_allow_html=True,
-            )
-            for c in commits:
-                # Strip the git hash prefix (first 7 chars + space)
-                msg = c[8:].strip() if len(c) > 8 else c
-                # Remove conventional commit prefixes like "fix:", "feat:", "style:"
-                for prefix in ("fix: ", "feat: ", "style: ", "chore: ", "docs: ", "refactor: ", "test: "):
-                    if msg.lower().startswith(prefix):
-                        msg = msg[len(prefix):]
-                        break
-                msg = msg.capitalize()
-                st.caption(f"· {msg}")
-
-        if changed:
-            # Show just filenames, not full paths
-            filenames = [f.split("/")[-1] for f in changed]
-            st.markdown(
-                '<p style="font-size:0.68rem;font-weight:700;letter-spacing:0.1em;'
-                'text-transform:uppercase;color:#5b20e0;margin:8px 0 4px;">Open files</p>',
-                unsafe_allow_html=True,
-            )
-            st.caption(", ".join(filenames))
-    except Exception:
-        st.caption("No workspace detected.")
-
-    if st.session_state.tokens_actual > 0:
-        saved = st.session_state.tokens_naive - st.session_state.tokens_actual
-        pct = int(saved / st.session_state.tokens_naive * 100) if st.session_state.tokens_naive else 0
-        st.divider()
-        st.markdown("### Token savings")
-        st.markdown(
-            f'<div style="background:#f3f0ff;border-radius:8px;padding:10px 12px;">'
-            f'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
-            f'<span style="font-size:0.75rem;color:#656565;">Sent with Memori</span>'
-            f'<span style="font-size:0.75rem;font-weight:600;color:#292929;">{st.session_state.tokens_actual:,}</span>'
-            f'</div>'
-            f'<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
-            f'<span style="font-size:0.75rem;color:#656565;">Without Memori</span>'
-            f'<span style="font-size:0.75rem;font-weight:600;color:#989898;text-decoration:line-through;">{st.session_state.tokens_naive:,}</span>'
-            f'</div>'
-            f'<div style="border-top:1px solid #ede9fe;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">'
-            f'<span style="font-size:0.75rem;font-weight:700;color:#712fff;">Saved</span>'
-            f'<span style="font-size:0.9rem;font-weight:700;color:#712fff;">{pct}% &nbsp;·&nbsp; {saved:,} tokens</span>'
-            f'</div>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
+    st.markdown("### Token savings")
+    token_slot = st.empty()
+    token_slot.markdown(
+        _token_savings_html(st.session_state.tokens_actual, st.session_state.tokens_naive),
+        unsafe_allow_html=True,
+    )
 
 # ── Header ────────────────────────────────────────────────────────────────────
 st.markdown("""
@@ -490,7 +451,7 @@ st.markdown("""
 
 # ── Task input ────────────────────────────────────────────────────────────────
 st.markdown("""
-<p style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;
+<p style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;
            text-transform:uppercase;color:#5b20e0;margin-bottom:6px;">Task</p>
 """, unsafe_allow_html=True)
 
@@ -513,7 +474,7 @@ with col_btn:
 with col_pills:
     if selected_agents:
         pills_html = "".join(
-            f'<span style="font-size:0.7rem;color:{c};background:{c}15;'
+            f'<span style="font-size:0.83rem;color:{c};background:{c}15;'
             f'padding:2px 9px;border-radius:100px;font-weight:500;white-space:nowrap;">{e} {n}</span> '
             for n, _, e, c in PIPELINE if n in selected_agents
         )
@@ -524,7 +485,7 @@ with col_pills:
 
 # ── Example prompts ───────────────────────────────────────────────────────────
 st.markdown("""
-<p style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;
+<p style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;
            text-transform:uppercase;color:#5b20e0;margin:1.4rem 0 0.5rem;">Try an example</p>
 """, unsafe_allow_html=True)
 eg_cols = st.columns(3)
@@ -532,6 +493,35 @@ for i, prompt in enumerate(EXAMPLE_PROMPTS):
     if eg_cols[i % 3].button(prompt, key=f"eg_{i}", use_container_width=True):
         st.session_state["pending_task"] = prompt
         st.rerun()
+
+# ── Token savings teaser ──────────────────────────────────────────────────────
+st.markdown("""
+<div style="margin:1.4rem 0 0;background:#faf9ff;border:1.5px solid #ede9fe;
+            border-radius:12px;padding:16px 20px;">
+  <div style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;
+              text-transform:uppercase;color:#712fff;margin-bottom:14px;">What Memori saves</div>
+  <div style="display:grid;grid-template-columns:1fr 32px 1fr;align-items:center;">
+    <div style="padding-right:16px;border-right:1px dashed #e0d9ff;">
+      <div style="font-size:0.83rem;color:#989898;font-weight:500;margin-bottom:5px;">Without Memori</div>
+      <div style="font-size:0.83rem;color:#989898;line-height:1.5;">
+        Full codebase + conversation history re-sent every session. Costs compound as the project grows.
+      </div>
+    </div>
+    <div style="text-align:center;color:#c4b5fd;font-size:1.2rem;line-height:1;">→</div>
+    <div style="padding-left:16px;">
+      <div style="font-size:0.83rem;color:#656565;font-weight:500;margin-bottom:5px;">With Memori</div>
+      <div style="font-size:0.83rem;color:#656565;line-height:1.5;">
+        Only relevant facts, recalled automatically. Prompts stay lean no matter how long the project runs.
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:12px;padding-top:10px;border-top:1px solid #ede9fe;
+              font-size:0.83rem;color:#989898;">
+    Run any example above and watch the <strong style="color:#712fff;">Token savings</strong>
+    counter in the sidebar update in real time.
+  </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Pipeline diagram (shown before first run) ─────────────────────────────────
 if st.session_state.tokens_actual == 0:
@@ -542,7 +532,7 @@ if st.session_state.tokens_actual == 0:
             f'padding:18px 12px;text-align:center;border-top:3px solid {color};">'
             f'<div style="font-size:1.3rem;line-height:1;margin-bottom:7px;">{emoji}</div>'
             f'<div style="font-weight:700;font-size:0.86rem;color:#0B0C0D;">{name}</div>'
-            f'<div style="font-size:0.75rem;color:#656565;margin-top:4px;line-height:1.4;">'
+            f'<div style="font-size:0.83rem;color:#656565;margin-top:4px;line-height:1.4;">'
             f'{AGENT_DESCRIPTIONS[name]}</div></div>'
         )
         if idx < len(PIPELINE) - 1:
@@ -552,10 +542,10 @@ if st.session_state.tokens_actual == 0:
             )
     st.markdown(f"""
 <div style="margin:2.2rem 0 0.5rem;">
-  <p style="font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+  <p style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
             color:#5b20e0;margin-bottom:0.9rem;">How it works</p>
   <div style="display:flex;gap:0;align-items:flex-start;">{agent_cards_html}</div>
-  <div style="text-align:center;margin-top:14px;font-size:0.78rem;color:#656565;">
+  <div style="text-align:center;margin-top:14px;font-size:0.83rem;color:#656565;">
     All agents share <strong style="color:#712fff;">branch-scoped memory</strong>
     — decisions, findings, and patterns persist across sessions automatically.
   </div>
@@ -575,7 +565,6 @@ if run_btn and task.strip():
     prior_output = ""
     active = [(n, cls, e, c) for n, cls, e, c in PIPELINE if n in selected_agents]
     slots = {name: st.empty() for name, *_ in active}
-    run_prompt_tokens = 0
 
     for name, agent_cls, emoji, color in active:
         slots[name].markdown(
@@ -590,7 +579,6 @@ if run_btn and task.strip():
         try:
             agent = agent_cls()
             output = agent.run(task=task, prior_context=prior_output)
-            run_prompt_tokens += agent.last_prompt_tokens
             results[name] = output
             prior_output = output
         except Exception as e:
@@ -614,15 +602,19 @@ if run_btn and task.strip():
             with st.container():
                 st.markdown(output)
 
-    if results:
-        # Update token savings counters.
-        # Naive cost = what we actually sent + all prior run outputs we're NOT re-sending.
+        # Update token savings after each agent and push to the sidebar immediately.
+        agent_tokens = agent.last_prompt_tokens
         prior_chars = st.session_state.accumulated_output_chars
-        naive_this_run = run_prompt_tokens + prior_chars // 4  # chars/4 ≈ tokens
-        st.session_state.tokens_actual += run_prompt_tokens
-        st.session_state.tokens_naive += max(naive_this_run, run_prompt_tokens)
-        st.session_state.accumulated_output_chars += sum(len(v) for v in results.values())
+        naive_tokens = agent_tokens + prior_chars // 4  # prior context we didn't re-send
+        st.session_state.tokens_actual += agent_tokens
+        st.session_state.tokens_naive += max(naive_tokens, agent_tokens)
+        st.session_state.accumulated_output_chars += len(output)
+        token_slot.markdown(
+            _token_savings_html(st.session_state.tokens_actual, st.session_state.tokens_naive),
+            unsafe_allow_html=True,
+        )
 
+    if results:
         st.markdown("<div style='height:0.25rem'></div>", unsafe_allow_html=True)
         st.success("Done — context saved to Memori. Your next session picks up exactly here.")
         with st.expander("Export results"):
