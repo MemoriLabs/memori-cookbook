@@ -123,14 +123,14 @@ class WellnessPlan(Base):
             "userId": self.user_id,
             "createdAt": self.created_at.isoformat() if self.created_at else None,
             "weekNumber": self.week_number,
-            "focusAreas": json.loads(self.focus_areas) if self.focus_areas else [],  # type: ignore[arg-type]
-            "dailyGoals": json.loads(self.daily_goals) if self.daily_goals else {},  # type: ignore[arg-type]
+            "focusAreas": json.loads(self.focus_areas) if self.focus_areas else [],  # type: ignore
+            "dailyGoals": json.loads(self.daily_goals) if self.daily_goals else {},  # type: ignore
             "weeklyObjectives": (
-                json.loads(self.weekly_objectives) if self.weekly_objectives else []  # type: ignore[arg-type]
+                json.loads(self.weekly_objectives) if self.weekly_objectives else []  # type: ignore
             ),
             "planMarkdown": self.plan_markdown,
             "interventions": (
-                json.loads(self.interventions) if self.interventions else []  # type: ignore[arg-type]
+                json.loads(self.interventions) if self.interventions else []  # type: ignore
             ),
             "isActive": self.is_active,
             "completedAt": self.completed_at.isoformat() if self.completed_at else None,
@@ -169,13 +169,13 @@ class WeeklyCheckIn(Base):
             ),
             "assessmentMarkdown": self.assessment_markdown,
             "progressSummary": (
-                json.loads(self.progress_summary) if self.progress_summary else {}  # type: ignore[arg-type]
+                json.loads(self.progress_summary) if self.progress_summary else {}  # type: ignore
             ),
             "correlationsFound": (
-                json.loads(self.correlations_found) if self.correlations_found else []  # type: ignore[arg-type]
+                json.loads(self.correlations_found) if self.correlations_found else []  # type: ignore
             ),
             "recommendations": (
-                json.loads(self.recommendations) if self.recommendations else []  # type: ignore[arg-type]
+                json.loads(self.recommendations) if self.recommendations else []  # type: ignore
             ),
             "avgSleepHours": self.avg_sleep_hours,
             "avgMoodScore": self.avg_mood_score,

@@ -1,10 +1,54 @@
+import os
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
 # Lazy imports for heavy dependencies
 if TYPE_CHECKING:
     pass
+
+
+def _run_agent_prompt(
+    prompt: str,
+    model_name: str,
+    api_key: str | None,
+    provider: str,
+) -> str:
+    """Run a single-turn LLM prompt using the specified provider."""
+    if provider == "claude":
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY", ""))
+        response = client.messages.create(
+            model=model_name,
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text  # type: ignore
+    if provider == "gemini":
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=api_key or os.getenv("GEMINI_API_KEY", ""),
+            base_url=GEMINI_BASE_URL,
+        )
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.choices[0].message.content or ""
+    # Default: OpenAI via Agno
+    from agno.agent import Agent
+    from agno.models.openai import OpenAIChat
+
+    model_kwargs: dict[str, Any] = {"id": model_name}
+    if api_key:
+        model_kwargs["api_key"] = api_key
+    agent = Agent(model=OpenAIChat(**model_kwargs), markdown=False)
+    result = agent.run(prompt)
+    return str(getattr(result, "content", result))
 
 
 class FinancialProfile(BaseModel):
@@ -99,21 +143,13 @@ def conduct_financial_health_assessment(
     spending_issues_context: str | None = None,
     model_name: str = "gpt-4o-mini",
     api_key: str | None = None,
+    provider: str = "openai",
 ) -> FinancialHealthResult:
     """
-    Use LangGraph to conduct a comprehensive financial health assessment.
+    Conduct a comprehensive financial health assessment.
 
-    This creates a multi-step assessment process:
-    1. Analyze spending patterns and trends
-    2. Evaluate budget adherence
-    3. Assess goal progress
-    4. Identify risk factors and opportunities
-    5. Generate personalized recommendations
+    Supports OpenAI, Gemini, and Claude providers.
     """
-    # Lazy import heavy dependencies
-    from agno.agent import Agent
-    from agno.models.openai import OpenAIChat
-
     # Build transaction summary
     if not transactions:
         transaction_summary = "No transaction data available yet."
@@ -251,18 +287,7 @@ Respond using the following JSON structure:
 }}
 """
 
-    # Set API key if provided
-    model_kwargs = {"id": model_name}
-    if api_key:
-        model_kwargs["api_key"] = api_key
-
-    agent = Agent(
-        name="Financial Health Assessor",
-        model=OpenAIChat(**model_kwargs),
-        markdown=False,
-    )
-    result = agent.run(prompt)
-    text = str(getattr(result, "content", result))
+    text = _run_agent_prompt(prompt, model_name, api_key, provider)
 
     # Parse JSON response
     import json
@@ -299,20 +324,9 @@ def generate_goal_setting_plan(
     current_goals: list[dict[str, Any]],
     model_name: str = "gpt-4o-mini",
     api_key: str | None = None,
+    provider: str = "openai",
 ) -> GoalSettingResult:
-    """
-    Use LangGraph to generate a personalized goal-setting plan.
-
-    This creates a multi-step goal-setting process:
-    1. Analyze current financial situation
-    2. Identify goal opportunities
-    3. Create actionable goals with timelines
-    4. Generate milestones and action plans
-    """
-    # Lazy import heavy dependencies
-    from agno.agent import Agent
-    from agno.models.openai import OpenAIChat
-
+    """Generate a personalized goal-setting plan. Supports OpenAI, Gemini, and Claude."""
     # Build financial summary
     if transactions:
         recent = transactions[-30:]
@@ -406,18 +420,7 @@ Respond using the following JSON structure:
 }}
 """
 
-    # Set API key if provided
-    model_kwargs = {"id": model_name}
-    if api_key:
-        model_kwargs["api_key"] = api_key
-
-    agent = Agent(
-        name="Goal Setting Planner",
-        model=OpenAIChat(**model_kwargs),
-        markdown=False,
-    )
-    result = agent.run(prompt)
-    text = str(getattr(result, "content", result))
+    text = _run_agent_prompt(prompt, model_name, api_key, provider)
 
     # Parse JSON response
     import json
@@ -449,14 +452,9 @@ def identify_recurring_expenses(
     transactions: list[dict[str, Any]],
     model_name: str = "gpt-4o-mini",
     api_key: str | None = None,
+    provider: str = "openai",
 ) -> list[dict[str, Any]]:
-    """
-    Use AI to identify recurring expenses from transaction history.
-    """
-    # Lazy import heavy dependencies
-    from agno.agent import Agent
-    from agno.models.openai import OpenAIChat
-
+    """Use AI to identify recurring expenses from transaction history."""
     if len(transactions) < 10:
         return []  # Need at least some data
 
@@ -500,17 +498,7 @@ Respond in JSON format:
 """
 
     # Set API key if provided
-    model_kwargs = {"id": model_name}
-    if api_key:
-        model_kwargs["api_key"] = api_key
-
-    agent = Agent(
-        name="Recurring Expense Analyzer",
-        model=OpenAIChat(**model_kwargs),
-        markdown=False,
-    )
-    result = agent.run(prompt)
-    text = str(getattr(result, "content", result))
+    text = _run_agent_prompt(prompt, model_name, api_key, provider)
 
     import json
     import re

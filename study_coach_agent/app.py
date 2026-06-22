@@ -51,13 +51,75 @@ title_html = f"""
 st.markdown(title_html, unsafe_allow_html=True)
 
 
+_PROVIDER_KEY_ENV = {
+    "openai": "OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "claude": "ANTHROPIC_API_KEY",
+}
+
+
 @st.cache_resource
-def get_memori_manager(openai_key: str, db_url: str | None) -> MemoriManager:
+def get_memori_manager(
+    provider: str, api_key: str, db_url: str | None
+) -> MemoriManager:
     return MemoriManager(
-        openai_api_key=openai_key,
+        provider=provider,
+        api_key=api_key,
         db_url=db_url,
         sqlite_path="./memori_study.sqlite",
     )
+
+
+def _get_quiz_llm_client(memori_mgr: MemoriManager):
+    """Return an OpenAI-compatible client for study_graph.py's llm_client calls.
+
+    For Claude, wraps the Anthropic client in a duck-typed adapter so that
+    study_graph.py's llm_client.chat.completions.create() calls work.
+    """
+    if memori_mgr._provider != "claude":
+        return memori_mgr._openai_client
+
+    claude_client = memori_mgr._claude_client
+    assert claude_client is not None
+
+    class _Msg:
+        def __init__(self, text: str) -> None:
+            self.content = text
+
+    class _Choice:
+        def __init__(self, text: str) -> None:
+            self.message = _Msg(text)
+
+    class _Resp:
+        def __init__(self, text: str) -> None:
+            self.choices = [_Choice(text)]
+
+    class _Completions:
+        def create(
+            self, messages=None, model=None
+        ):  # model arg accepted but we use closure model
+            system_msg = ""
+            user_msgs = []
+            for m in messages or []:
+                if m.get("role") == "system":
+                    system_msg = m.get("content", "")
+                else:
+                    user_msgs.append(m)
+            resp = claude_client.messages.create(
+                model=model,
+                max_tokens=2048,
+                system=system_msg or None,
+                messages=user_msgs,
+            )
+            return _Resp(resp.content[0].text)
+
+    class _Chat:
+        completions = _Completions()
+
+    class _Adapter:
+        chat = _Chat()
+
+    return _Adapter()
 
 
 def _ensure_state():
@@ -100,17 +162,10 @@ def _maybe_restore_profile_from_memori(memori_mgr: MemoriManager) -> None:
             "If you truly have no stored information about the learner, respond "
             "with an empty JSON object: {}"
         )
-        response = memori_mgr.openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": "Return the last known learner profile now.",
-                },
-            ],
+        raw = memori_mgr._chat(
+            system=system_prompt,
+            user="Return the last known learner profile now.",
         )
-        raw = response.choices[0].message.content or ""
         start = raw.find("{")
         end = raw.rfind("}")
         if start == -1 or end == -1:
@@ -145,12 +200,21 @@ def _maybe_restore_profile_from_memori(memori_mgr: MemoriManager) -> None:
 
 def sidebar_keys():
     with st.sidebar:
-        st.subheader("🔑 API Keys")
-        openai_api_key_input = st.text_input(
-            "OpenAI API Key",
-            value=os.getenv("OPENAI_API_KEY", ""),
+        st.subheader("🔑 LLM Provider")
+        provider = st.selectbox(
+            "Provider",
+            options=["OpenAI", "Gemini", "Claude"],
+            index=0,
+            help="Which LLM provider to use for memory and quiz generation.",
+        ).lower()
+
+        env_key = _PROVIDER_KEY_ENV.get(provider, "OPENAI_API_KEY")
+        api_key_input = st.text_input(
+            f"{provider.capitalize()} API Key",
+            value=os.getenv(env_key, ""),
             type="password",
         )
+
         memori_api_key_input = st.text_input(
             "Memori API Key (optional)",
             value=os.getenv("MEMORI_API_KEY", ""),
@@ -164,23 +228,22 @@ def sidebar_keys():
                 "SQLAlchemy or MongoDB URL. "
                 "Examples: sqlite:///memori_study.sqlite, "
                 "postgresql+psycopg://user:password@host:5432/database, "
-                "mysql+pymysql://user:password@host:3306/database, "
                 "mongodb://host:27017/memori"
             ),
         )
 
         if st.button("Save Settings"):
-            if openai_api_key_input:
-                os.environ["OPENAI_API_KEY"] = openai_api_key_input
+            if api_key_input:
+                os.environ[env_key] = api_key_input
             if memori_api_key_input:
                 os.environ["MEMORI_API_KEY"] = memori_api_key_input
             if db_url_input:
                 os.environ["MEMORI_DB_URL"] = db_url_input
 
-            if openai_api_key_input or memori_api_key_input or db_url_input:
+            if api_key_input or memori_api_key_input or db_url_input:
                 st.success("✅ Settings saved for this session")
             else:
-                st.warning("Please enter at least an OpenAI API key")
+                st.warning("Please enter at least one API key")
 
         st.markdown("---")
         st.markdown("### ℹ️ About")
@@ -193,6 +256,7 @@ def sidebar_keys():
             - Uses **Memori v3** as long-term learning memory.
             """
         )
+        os.environ["_STUDY_PROVIDER"] = provider
 
 
 def study_plan_tab(memori_mgr: MemoriManager):
@@ -317,7 +381,7 @@ def today_session_tab(memori_mgr: MemoriManager):
         try:
             mgr = memori_mgr  # alias
             initial = run_initial_verification(
-                profile=profile, log=log, llm_client=mgr.openai_client
+                profile=profile, log=log, llm_client=_get_quiz_llm_client(mgr)
             )
             st.session_state.quiz = initial.quiz
             st.session_state.explanation_prompt = initial.explanation_prompt
@@ -362,7 +426,7 @@ def today_session_tab(memori_mgr: MemoriManager):
                     log=log,
                     user_quiz_answers=st.session_state.answers,
                     user_explanation=st.session_state.explanation,
-                    llm_client=mgr.openai_client,
+                    llm_client=_get_quiz_llm_client(mgr),
                 )
                 st.session_state.last_result = result
 
@@ -443,12 +507,14 @@ def main():
 
     try:
         db_url = os.getenv("MEMORI_DB_URL", "") or None
-        openai_key = os.getenv("OPENAI_API_KEY", "")
-        memori_mgr = get_memori_manager(openai_key, db_url)
+        provider = os.getenv("_STUDY_PROVIDER", "openai")
+        env_key = _PROVIDER_KEY_ENV.get(provider, "OPENAI_API_KEY")
+        api_key = os.getenv(env_key, "")
+        memori_mgr = get_memori_manager(provider, api_key, db_url)
     except Exception as e:
         st.error(
-            f"Failed to initialize Memori / OpenAI. "
-            f"Check your OPENAI_API_KEY and DB settings. Details: {e}"
+            f"Failed to initialize Memori. "
+            f"Check your API key and DB settings. Details: {e}"
         )
         return
 

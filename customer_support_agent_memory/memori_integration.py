@@ -156,21 +156,49 @@ class MemoriIntegration:
                 client = self._registered_clients[client_key]
                 print(f"DEBUG: Reusing registered OpenAI client for {base_url}")
 
-            # Prepare messages
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": question})
+            # Manually recall relevant facts and inject into the user message.
+            # The DO agent endpoint rejects system-role messages, so we cannot
+            # rely on Memori's auto-inject (which inserts a system message).
+            recalled_facts = self.mem.recall(question, limit=5)
+            if recalled_facts:
+                fact_lines = "\n".join(f"- {f['content']}" for f in recalled_facts)  # type: ignore
+                augmented_question = (
+                    f"{question}\n\n<memori_context>\n"
+                    "Only use the following context if relevant to the query. "
+                    f"Known facts about the user:\n{fact_lines}\n</memori_context>"
+                )
+            else:
+                augmented_question = question
 
-            # Call Gradient AI agent with Memori integration
-            # Memori automatically handles memory recall and storage
-            response = client.chat.completions.create(
+            messages = [{"role": "user", "content": augmented_question}]
+
+            # Call the DO agent directly (bypass Memori auto-inject to avoid system messages)
+            direct_client = OpenAI(base_url=base_url, api_key=access_key)
+            response = direct_client.chat.completions.create(
                 model="n/a",  # Model is determined by the Gradient agent
                 messages=messages,
             )
 
             # Extract answer
             answer = response.choices[0].message.content
+
+            # Manually enqueue augmentation so Memori stores this turn for future recall.
+            # We use the clean question (no injected context) so stored facts stay tidy.
+            if self.mem.config.augmentation is not None:
+                from memori.memory.augmentation.input import AugmentationInput
+
+                aug_messages = [
+                    {"role": "user", "content": question},
+                    {"role": "assistant", "content": answer},
+                ]
+                self.mem.config.augmentation.enqueue(
+                    AugmentationInput(
+                        conversation_id=str(self.mem.config.session_id),
+                        entity_id=self.mem.config.entity_id,
+                        process_id=self.mem.config.process_id,
+                        conversation_messages=aug_messages,
+                    )
+                )
 
             print(f"DEBUG: Memori chat successful - {len(answer)} chars response")
 

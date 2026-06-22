@@ -41,8 +41,8 @@ try:
     )
     from customer_support_agent_memory.memori_integration import get_memori_instance
 except ImportError:
-    from digitalocean_client import DigitalOceanGradientClient  # type: ignore[no-redef]
-    from memori_integration import get_memori_instance  # type: ignore[no-redef]
+    from digitalocean_client import DigitalOceanGradientClient  # type: ignore
+    from memori_integration import get_memori_instance  # type: ignore
 
 # Load environment variables
 load_dotenv()
@@ -1091,7 +1091,7 @@ app = FastAPI(
 
 # CORS middleware
 app.add_middleware(
-    CORSMiddleware,  # type: ignore[arg-type]
+    CORSMiddleware,  # type: ignore
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
@@ -1287,7 +1287,7 @@ async def ask(
                 domain_id=domain_id,
                 agent_url=agent_url,
                 agent_access_key=agent_access_key,
-                system_prompt="You are a helpful customer support agent. Use the knowledge base context to answer questions accurately. If you don't know the answer, say so politely.",
+                system_prompt=None,
             ),
         )
 

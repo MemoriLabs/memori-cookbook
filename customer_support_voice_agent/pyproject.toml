@@ -7,14 +7,14 @@ dependencies = [
     "streamlit>=1.36.0",
     "python-dotenv>=1.0.1",
     "sqlalchemy>=2.0.25",
-    "memori>=0.3.0",          # Adjust to the version you use elsewhere in this repo
+    "memori>=3.0.0",
     "openai>=1.40.0",
     "firecrawl-py>=0.1.0",    # Firecrawl Python SDK
     "pydantic>=2.7.0",
 ]
 
 [project.optional-dependencies]
-dev = ["black", "ruff", "mypy"]
+dev = ["ruff", "ty"]
 
 [build-system]
 requires = ["setuptools", "wheel"]

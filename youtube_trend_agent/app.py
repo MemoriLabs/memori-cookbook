@@ -1,23 +1,38 @@
 """
-YouTube Trend Analysis Agent with Memori, Agno (OpenAI), and YouTube scraping.
+YouTube Trend Analysis Agent with Memori, multi-provider LLM, and YouTube scraping.
 
 Streamlit app:
-- Sidebar: API keys + YouTube channel URL + "Ingest channel into Memori" button.
+- Sidebar: LLM provider selector, API keys, YouTube channel URL, ingest button.
 - Main: Chat interface to ask about trends and get new video ideas.
 
-This app uses:
-- OpenAI (via both the OpenAI SDK and Agno's OpenAIChat model) for LLM reasoning.
-- yt-dlp to scrape YouTube channel/playlist videos.
-- Memori to store and search your channel's video history.
+Supports OpenAI, Google Gemini, and Anthropic Claude as LLM backends.
 """
 
 import base64
 import os
 
 import streamlit as st
-from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-from core import fetch_exa_trends, ingest_channel_into_memori
+from core import fetch_exa_trends, ingest_channel_into_memori, init_memori
+
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+_PROVIDER_KEY_ENV = {
+    "openai": "OPENAI_API_KEY",
+    "gemini": "GEMINI_API_KEY",
+    "claude": "ANTHROPIC_API_KEY",
+}
+
+_PROVIDER_LABELS = {
+    "openai": "OpenAI",
+    "gemini": "Google Gemini",
+    "claude": "Anthropic Claude",
+}
+
+_PROVIDER_KEY_LABELS = {
+    "openai": "OpenAI API Key",
+    "gemini": "Gemini API Key",
+    "claude": "Anthropic API Key",
+}
 
 
 def _load_inline_image(path: str, height_px: int) -> str:
@@ -34,18 +49,58 @@ def _load_inline_image(path: str, height_px: int) -> str:
         return ""
 
 
+def _run_chat_prompt(full_prompt: str, provider: str, api_key: str) -> str:
+    """Route a chat completion through the selected LLM provider."""
+    if provider == "claude":
+        from anthropic import Anthropic
+
+        client = Anthropic(api_key=api_key or os.getenv("ANTHROPIC_API_KEY", ""))
+        model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+        response = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            messages=[{"role": "user", "content": full_prompt}],
+        )
+        return response.content[0].text  # type: ignore
+
+    if provider == "gemini":
+        from openai import OpenAI
+
+        client = OpenAI(
+            api_key=api_key or os.getenv("GEMINI_API_KEY", ""),
+            base_url=GEMINI_BASE_URL,
+        )
+        model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": full_prompt}],
+        )
+        return response.choices[0].message.content or ""
+
+    # OpenAI via Agno
+    from agno.agent import Agent
+    from agno.models.openai import OpenAIChat
+
+    model_id = os.getenv("YOUTUBE_TREND_MODEL", "gpt-4o-mini")
+    model_kwargs: dict = {"id": model_id}
+    if api_key:
+        model_kwargs["api_key"] = api_key
+    advisor = Agent(
+        name="YouTube Trend Advisor",
+        model=OpenAIChat(**model_kwargs),
+        markdown=True,
+    )
+    result = advisor.run(full_prompt)
+    return str(result.content) if hasattr(result, "content") else str(result)
+
+
 def main():
-    # Page config
     st.set_page_config(
         page_title="YouTube Trend Analysis Agent",
         layout="wide",
     )
 
-    # Branded title with Memori logo (reusing the pattern from AI Consultant Agent)
-    memori_img_inline = _load_inline_image(
-        "assets/Memori_Logo.png",
-        height_px=85,
-    )
+    memori_img_inline = _load_inline_image("assets/Memori_Logo.png", height_px=85)
     title_html = f"""
 <div style='display:flex; align-items:center; width:120%; padding:8px 0;'>
   <h1 style='margin:0; padding:0; font-size:2.2rem; font-weight:800; display:flex; align-items:center; gap:10px;'>
@@ -56,20 +111,25 @@ def main():
 """
     st.markdown(title_html, unsafe_allow_html=True)
 
-    # Initialize session state
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    # Memori/OpenAI client will be initialized lazily when needed.
 
-    # Sidebar
+    # ── Sidebar ──────────────────────────────────────────────────────────────
     with st.sidebar:
         st.subheader("🔑 API Keys & Channel")
 
-        openai_api_key_input = st.text_input(
-            "OpenAI API Key",
-            value=os.getenv("OPENAI_API_KEY", ""),
+        provider = st.selectbox(
+            "LLM Provider",
+            options=["openai", "gemini", "claude"],
+            format_func=lambda p: _PROVIDER_LABELS[p],
+            index=0,
+        )
+
+        env_key = _PROVIDER_KEY_ENV[provider]
+        api_key_input = st.text_input(
+            _PROVIDER_KEY_LABELS[provider],
+            value=os.getenv(env_key, ""),
             type="password",
-            help="Your OpenAI API key (used for both Memori and Agno).",
         )
 
         exa_api_key_input = st.text_input(
@@ -92,23 +152,34 @@ def main():
         )
 
         if st.button("Save Settings"):
-            if openai_api_key_input:
-                os.environ["OPENAI_API_KEY"] = openai_api_key_input
+            if api_key_input:
+                os.environ[env_key] = api_key_input
             if exa_api_key_input:
                 os.environ["EXA_API_KEY"] = exa_api_key_input
             if memori_api_key_input:
                 os.environ["MEMORI_API_KEY"] = memori_api_key_input
 
-            st.success("✅ API keys saved for this session.")
+            # Initialize Memori with chosen provider
+            st.session_state["api_key"] = api_key_input
+            init_memori(provider=provider, api_key=api_key_input)
+            st.success("✅ Settings saved for this session.")
 
         st.markdown("---")
 
         if st.button("Ingest channel into Memori"):
-            if not os.getenv("OPENAI_API_KEY"):
-                st.warning("OPENAI_API_KEY is required before ingestion.")
+            effective_key = api_key_input or os.getenv(env_key, "")
+            if not effective_key:
+                st.warning(
+                    f"{_PROVIDER_KEY_LABELS[provider]} is required before ingestion."
+                )
             elif not channel_url_input.strip():
                 st.warning("Please enter a YouTube channel or playlist URL.")
             else:
+                # Ensure session state reflects current sidebar selections
+                st.session_state["api_key"] = effective_key
+                st.session_state["llm_provider"] = provider
+                if st.session_state.get("memori") is None:
+                    init_memori(provider=provider, api_key=effective_key)
                 with st.spinner(
                     "📥 Scraping channel and ingesting videos into Memori…"
                 ):
@@ -127,14 +198,15 @@ def main():
             """
         )
 
-    # Get keys for main app logic
-    if not os.getenv("OPENAI_API_KEY"):
+    # ── Guard: need API key ───────────────────────────────────────────────────
+    effective_key = api_key_input or os.getenv(_PROVIDER_KEY_ENV[provider], "")
+    if not effective_key:
         st.warning(
-            "⚠️ Please enter your OpenAI API key in the sidebar to start chatting!"
+            f"⚠️ Please enter your {_PROVIDER_LABELS[provider]} API key in the sidebar to start chatting!"
         )
         st.stop()
 
-    # Display chat history
+    # ── Chat history ──────────────────────────────────────────────────────────
     st.markdown(
         "<h2 style='margin-top:0;'>YouTube Trend Chat</h2>",
         unsafe_allow_html=True,
@@ -143,7 +215,7 @@ def main():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Chat input
+    # ── Chat input ────────────────────────────────────────────────────────────
     prompt = st.chat_input("Ask about your channel trends or new video ideas…")
     if prompt:
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -153,7 +225,6 @@ def main():
         with st.chat_message("assistant"):
             with st.spinner("🤔 Analyzing your channel memories…"):
                 try:
-                    # Build context from Memori (if available) and from cached channel videos
                     memori_context = ""
                     mem = st.session_state.get("memori")
                     if mem is not None and hasattr(mem, "search"):
@@ -170,23 +241,21 @@ def main():
                     videos = st.session_state.get("channel_videos") or []
                     video_summaries = ""
                     if videos:
-                        video_summaries_lines = []
+                        lines = []
                         for v in videos[:10]:
                             title = v.get("title") or "Untitled video"
                             topics = v.get("topics") or []
                             topics_str = ", ".join(topics) if topics else "N/A"
                             views = v.get("views") or "Unknown"
                             desc = v.get("description") or ""
-                            if len(desc) > 120:
-                                desc_snip = desc[:120].rstrip() + "…"
-                            else:
-                                desc_snip = desc
-                            video_summaries_lines.append(
+                            desc_snip = (
+                                (desc[:120].rstrip() + "…") if len(desc) > 120 else desc
+                            )
+                            lines.append(
                                 f"- {title} | topics: {topics_str} | views: {views} | desc: {desc_snip}"
                             )
                         video_summaries = (
-                            "\n\nRecent videos on this channel:\n"
-                            + "\n".join(video_summaries_lines)
+                            "\n\nRecent videos on this channel:\n" + "\n".join(lines)
                         )
 
                     channel_name = (
@@ -194,7 +263,6 @@ def main():
                     )
 
                     exa_trends = ""
-                    # Fetch or reuse Exa-based trend context, if Exa is configured
                     if os.getenv("EXA_API_KEY") and videos:
                         if "exa_trends" in st.session_state:
                             exa_trends = st.session_state["exa_trends"]
@@ -226,19 +294,8 @@ External web trends for this niche (may be partial):
 {exa_trends}
 """
 
-                    advisor = Agent(
-                        name="YouTube Trend Advisor",
-                        model=OpenAIChat(
-                            id=os.getenv("YOUTUBE_TREND_MODEL", "gpt-4o-mini")
-                        ),
-                        markdown=True,
-                    )
-
-                    result = advisor.run(full_prompt)
-                    response_text = (
-                        str(result.content)
-                        if hasattr(result, "content")
-                        else str(result)
+                    response_text = _run_chat_prompt(
+                        full_prompt, provider, effective_key
                     )
 
                     st.session_state.messages.append(
