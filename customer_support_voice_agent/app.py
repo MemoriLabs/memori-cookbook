@@ -213,7 +213,8 @@ def _ingest_urls_with_firecrawl(
     for page in all_pages:
         url = None
         if isinstance(page, dict):
-            meta = page.get("metadata") or {}
+            meta_raw = page.get("metadata")
+            meta: dict = meta_raw if isinstance(meta_raw, dict) else {}
             url = page.get("url") or meta.get("sourceURL")
         key = url or id(page)
         if key in seen_urls:
@@ -235,7 +236,8 @@ def _ingest_urls_with_firecrawl(
             else:
                 continue
 
-        metadata = page_dict.get("metadata") or {}
+        metadata_raw = page_dict.get("metadata")
+        metadata: dict = metadata_raw if isinstance(metadata_raw, dict) else {}
         url = page_dict.get("url") or metadata.get("sourceURL") or urls[0]
         markdown = (
             page_dict.get("markdown")
