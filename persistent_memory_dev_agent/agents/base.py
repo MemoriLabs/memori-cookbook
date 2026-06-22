@@ -33,11 +33,13 @@ class BaseAgent:
 
         if backend == "sqlite":
             import sqlite3
+
             path = settings.db_path or "memori.db"
             return lambda: sqlite3.connect(path)
 
         if backend == "mongodb":
             from pymongo import MongoClient
+
             uri = settings.db_connection_string or "mongodb://localhost:27017"
             mongo = MongoClient(uri)
             try:
@@ -49,15 +51,21 @@ class BaseAgent:
         if backend == "oceanbase":
             try:
                 from sqlalchemy.dialects import registry
-                registry.register("mysql.oceanbase", "pyobvector.schema.dialect", "OceanBaseDialect")
+
+                registry.register(
+                    "mysql.oceanbase", "pyobvector.schema.dialect", "OceanBaseDialect"
+                )
             except Exception:
                 pass
 
         from sqlalchemy import create_engine
         from sqlalchemy.orm import sessionmaker
+
         dsn = settings.db_connection_string
         if not dsn:
-            raise ValueError(f"DB_CONNECTION_STRING is required for backend '{backend}'")
+            raise ValueError(
+                f"DB_CONNECTION_STRING is required for backend '{backend}'"
+            )
         engine = create_engine(dsn, pool_pre_ping=True)
         return sessionmaker(bind=engine)
 
@@ -96,7 +104,12 @@ class BaseAgent:
 
     def run(self, task: str, prior_context: str = "") -> str:
         context_id = self._set_context()
-        logger.debug("%s running | context=%s | provider=%s", self.NAME, context_id, self.provider)
+        logger.debug(
+            "%s running | context=%s | provider=%s",
+            self.NAME,
+            context_id,
+            self.provider,
+        )
 
         user_message = task
         if prior_context:

@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     #                          mongodb | cockroachdb | tidb | oceanbase | oracle
     db_backend: str = "cloud"
     db_connection_string: str = ""  # DSN for all SQL + MongoDB backends
-    db_path: str = "memori.db"      # SQLite file path
+    db_path: str = "memori.db"  # SQLite file path
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,4 +1,3 @@
-import os
 import subprocess
 
 import pytest
@@ -12,6 +11,7 @@ def mock_env(monkeypatch):
     monkeypatch.setenv("MEMORI_API_KEY", "test-memori-key")
 
     from core.config import get_settings
+
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -22,7 +22,8 @@ def fake_repo(tmp_path):
     """Minimal git repo for testing git_context utilities."""
     subprocess.run(["git", "init", str(tmp_path), "-q"], check=True)
     subprocess.run(
-        ["git", "-C", str(tmp_path), "config", "user.email", "test@test.com"], check=True
+        ["git", "-C", str(tmp_path), "config", "user.email", "test@test.com"],
+        check=True,
     )
     subprocess.run(
         ["git", "-C", str(tmp_path), "config", "user.name", "Test"], check=True

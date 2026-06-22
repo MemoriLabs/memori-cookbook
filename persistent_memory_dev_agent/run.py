@@ -9,7 +9,6 @@ Usage:
 """
 
 import logging
-import sys
 
 import click
 from dotenv import load_dotenv
@@ -60,7 +59,9 @@ def token_demo() -> None:
 
 
 @cli.command("branch-status")
-@click.option("--repo", default=".", show_default=True, help="Path to the git repository")
+@click.option(
+    "--repo", default=".", show_default=True, help="Path to the git repository"
+)
 def branch_status(repo: str) -> None:
     """Show the current branch memory scope and recent git context."""
     from core.git_context import (
@@ -89,7 +90,11 @@ def branch_status(repo: str) -> None:
 
     console.print()
     console.print(
-        Panel(table, title="[bold cyan]Persistent Memory Dev Agent — Branch Status[/bold cyan]", border_style="cyan")
+        Panel(
+            table,
+            title="[bold cyan]Persistent Memory Dev Agent — Branch Status[/bold cyan]",
+            border_style="cyan",
+        )
     )
     console.print(
         "\n[dim]Tip: switch branches with [bold]git checkout[/bold] and the swarm "

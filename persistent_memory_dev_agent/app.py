@@ -12,19 +12,21 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.dirname(__file__))
 load_dotenv()
 
-from agents.coder import CoderAgent
-from agents.docs import DocsAgent
-from agents.reviewer import ReviewerAgent
-from agents.tester import TesterAgent
-from core.config import get_settings
-from core.git_context import get_context_id
+from agents.coder import CoderAgent  # noqa: E402
+from agents.docs import DocsAgent  # noqa: E402
+from agents.reviewer import ReviewerAgent  # noqa: E402
+from agents.tester import TesterAgent  # noqa: E402
+from core.config import get_settings  # noqa: E402
 
-st.set_page_config(page_title="Persistent Memory Dev Agent", layout="wide", page_icon="🧠")
+st.set_page_config(
+    page_title="Persistent Memory Dev Agent", layout="wide", page_icon="🧠"
+)
 
 # ── Brand colors (memorilabs.ai) ──────────────────────────────────────────────
 # Primary: #712fff  Blue: #0080ff  Orange: #F47725  Green: #006b48  Dark: #0B0C0D
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap');
 
@@ -208,15 +210,17 @@ div[data-testid="column"] .stButton button:not([kind="primary"]):hover {
     transform: translateY(-1px) !important;
 }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 # Agent colors from Memori brand palette
 PIPELINE: list[tuple[str, type, str, str]] = [
-    ("Coder",    CoderAgent,    "⌨",  "#0080ff"),   # brand blue
-    ("Reviewer", ReviewerAgent, "🔍", "#F47725"),   # brand orange
-    ("Tester",   TesterAgent,   "✅", "#006b48"),   # brand green
-    ("Docs",     DocsAgent,     "📄", "#712fff"),   # brand purple
+    ("Coder", CoderAgent, "⌨", "#0080ff"),  # brand blue
+    ("Reviewer", ReviewerAgent, "🔍", "#F47725"),  # brand orange
+    ("Tester", TesterAgent, "✅", "#006b48"),  # brand green
+    ("Docs", DocsAgent, "📄", "#712fff"),  # brand purple
 ]
 
 PROVIDERS = ["Gemini", "OpenAI", "Anthropic", "AWS Bedrock"]
@@ -236,27 +240,29 @@ DB_BACKENDS = [
 
 DB_BACKEND_ENV = {
     "Memori Cloud": "cloud",
-    "SQLite":       "sqlite",
-    "PostgreSQL":   "postgresql",
-    "MySQL":        "mysql",
-    "MariaDB":      "mariadb",
-    "MongoDB":      "mongodb",
-    "CockroachDB":  "cockroachdb",
-    "TiDB":         "tidb",
-    "OceanBase":    "oceanbase",
-    "Oracle":       "oracle",
+    "SQLite": "sqlite",
+    "PostgreSQL": "postgresql",
+    "MySQL": "mysql",
+    "MariaDB": "mariadb",
+    "MongoDB": "mongodb",
+    "CockroachDB": "cockroachdb",
+    "TiDB": "tidb",
+    "OceanBase": "oceanbase",
+    "Oracle": "oracle",
 }
 
 DEFAULT_MODELS = {
-    "Gemini":      "gemini-2.5-flash",
-    "OpenAI":      "gpt-4o-mini",
-    "Anthropic":   "claude-sonnet-4-6",
+    "Gemini": "gemini-2.5-flash",
+    "OpenAI": "gpt-4o-mini",
+    "Anthropic": "claude-sonnet-4-6",
     "AWS Bedrock": "anthropic.claude-3-5-sonnet-20241022-v2:0",
 }
 
 PROVIDER_ENV = {
-    "Gemini": "gemini", "OpenAI": "openai",
-    "Anthropic": "anthropic", "AWS Bedrock": "bedrock",
+    "Gemini": "gemini",
+    "OpenAI": "openai",
+    "Anthropic": "anthropic",
+    "AWS Bedrock": "bedrock",
 }
 
 EXAMPLE_PROMPTS = [
@@ -269,27 +275,41 @@ EXAMPLE_PROMPTS = [
 ]
 
 AGENT_DESCRIPTIONS = {
-    "Coder":    "Plans and writes the code",
+    "Coder": "Plans and writes the code",
     "Reviewer": "Catches bugs and edge cases",
-    "Tester":   "Writes tests to verify it works",
-    "Docs":     "Writes docs for the team",
+    "Tester": "Writes tests to verify it works",
+    "Docs": "Writes docs for the team",
 }
 
 
 def apply_keys(
-    provider: str, memori: str, key1: str, key2: str, model_name: str, region: str,
-    db_backend: str = "cloud", db_conn_str: str = "", db_path: str = "memori.db",
+    provider: str,
+    memori: str,
+    key1: str,
+    key2: str,
+    model_name: str,
+    region: str,
+    db_backend: str = "cloud",
+    db_conn_str: str = "",
+    db_path: str = "memori.db",
 ) -> None:
     os.environ["LLM_PROVIDER"] = PROVIDER_ENV[provider]
-    if memori:      os.environ["MEMORI_API_KEY"] = memori
-    if provider == "Gemini"    and key1: os.environ["GOOGLE_API_KEY"]        = key1
-    if provider == "OpenAI"    and key1: os.environ["OPENAI_API_KEY"]        = key1
-    if provider == "Anthropic" and key1: os.environ["ANTHROPIC_API_KEY"]     = key1
+    if memori:
+        os.environ["MEMORI_API_KEY"] = memori
+    if provider == "Gemini" and key1:
+        os.environ["GOOGLE_API_KEY"] = key1
+    if provider == "OpenAI" and key1:
+        os.environ["OPENAI_API_KEY"] = key1
+    if provider == "Anthropic" and key1:
+        os.environ["ANTHROPIC_API_KEY"] = key1
     if provider == "AWS Bedrock":
-        if key1: os.environ["AWS_ACCESS_KEY_ID"]     = key1
-        if key2: os.environ["AWS_SECRET_ACCESS_KEY"] = key2
+        if key1:
+            os.environ["AWS_ACCESS_KEY_ID"] = key1
+        if key2:
+            os.environ["AWS_SECRET_ACCESS_KEY"] = key2
         os.environ["AWS_REGION"] = region
-    if model_name: os.environ["LLM_MODEL"] = model_name
+    if model_name:
+        os.environ["LLM_MODEL"] = model_name
     os.environ["DB_BACKEND"] = db_backend
     if db_backend == "sqlite":
         os.environ["DB_PATH"] = db_path
@@ -307,20 +327,20 @@ def _token_savings_html(actual: int, naive: int) -> str:
         f'<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
         f'<span style="font-size:0.83rem;color:#656565;">Sent with Memori</span>'
         f'<span style="font-size:0.83rem;font-weight:600;color:#292929;">'
-        f'{"—" if not ran else f"{actual:,}"}</span>'
-        f'</div>'
+        f"{'—' if not ran else f'{actual:,}'}</span>"
+        f"</div>"
         f'<div style="display:flex;justify-content:space-between;margin-bottom:8px;">'
         f'<span style="font-size:0.83rem;color:#656565;">Without Memori (est.)</span>'
         f'<span style="font-size:0.83rem;font-weight:600;color:#989898;">'
-        f'{"—" if not ran else f"{naive:,}"}</span>'
-        f'</div>'
+        f"{'—' if not ran else f'{naive:,}'}</span>"
+        f"</div>"
         f'<div style="border-top:1px solid #ede9fe;padding-top:8px;'
         f'display:flex;justify-content:space-between;align-items:center;">'
         f'<span style="font-size:0.83rem;font-weight:700;color:#712fff;">Saved</span>'
         f'<span style="font-size:0.9rem;font-weight:700;color:#712fff;">'
-        f'{"Run an agent to see" if not ran else f"{pct}% · {saved:,} tokens"}</span>'
-        f'</div>'
-        f'</div>'
+        f"{'Run an agent to see' if not ran else f'{pct}% · {saved:,} tokens'}</span>"
+        f"</div>"
+        f"</div>"
     )
 
 
@@ -328,15 +348,16 @@ def agent_header_html(name: str, emoji: str, color: str, thinking: bool = False)
     badge = (
         f'<span style="font-size:0.83rem;color:{color};background:{color}18;'
         f'padding:2px 9px;border-radius:100px;font-weight:500;margin-left:6px;">thinking…</span>'
-        if thinking else ""
+        if thinking
+        else ""
     )
     return (
         f'<div style="display:flex;align-items:center;padding:13px 18px 12px;'
-        f'background:#fdfcff;border-bottom:1px solid #f3f0ff;'
+        f"background:#fdfcff;border-bottom:1px solid #f3f0ff;"
         f'border-radius:10px 10px 0 0;border-top:3px solid {color};">'
         f'<span style="font-size:1rem;line-height:1;margin-right:8px;">{emoji}</span>'
         f'<span style="font-weight:600;font-size:0.86rem;color:#0B0C0D;">{name}</span>'
-        f'{badge}</div>'
+        f"{badge}</div>"
         f'<div style="padding:16px 18px 8px;">'
     )
 
@@ -351,7 +372,8 @@ if "task_area" not in st.session_state:
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
+    st.markdown(
+        """
     <div style="padding:4px 0 2px;">
         <div style="display:flex;align-items:center;gap:9px;margin-bottom:3px;">
             <span style="font-size:1.3rem;">🧠</span>
@@ -359,28 +381,50 @@ with st.sidebar:
         </div>
         <p style="margin:0;font-size:0.83rem;color:#656565;">Multi-agent dev swarm</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
     st.divider()
 
     st.markdown("### API Keys")
-    memori_key = st.text_input("Memori API Key", value=os.getenv("MEMORI_API_KEY", ""), type="password")
+    memori_key = st.text_input(
+        "Memori API Key", value=os.getenv("MEMORI_API_KEY", ""), type="password"
+    )
     provider_label = st.selectbox("LLM Provider", PROVIDERS)
 
     llm_key = llm_key2 = ""
     region_val = "us-east-1"
 
     if provider_label == "Gemini":
-        llm_key = st.text_input("Google API Key", value=os.getenv("GOOGLE_API_KEY", ""), type="password")
+        llm_key = st.text_input(
+            "Google API Key", value=os.getenv("GOOGLE_API_KEY", ""), type="password"
+        )
     elif provider_label == "OpenAI":
-        llm_key = st.text_input("OpenAI API Key", value=os.getenv("OPENAI_API_KEY", ""), type="password")
+        llm_key = st.text_input(
+            "OpenAI API Key", value=os.getenv("OPENAI_API_KEY", ""), type="password"
+        )
     elif provider_label == "Anthropic":
-        llm_key = st.text_input("Anthropic API Key", value=os.getenv("ANTHROPIC_API_KEY", ""), type="password")
+        llm_key = st.text_input(
+            "Anthropic API Key",
+            value=os.getenv("ANTHROPIC_API_KEY", ""),
+            type="password",
+        )
     else:
-        llm_key  = st.text_input("AWS Access Key ID",     value=os.getenv("AWS_ACCESS_KEY_ID",     ""), type="password")
-        llm_key2 = st.text_input("AWS Secret Access Key", value=os.getenv("AWS_SECRET_ACCESS_KEY", ""), type="password")
+        llm_key = st.text_input(
+            "AWS Access Key ID",
+            value=os.getenv("AWS_ACCESS_KEY_ID", ""),
+            type="password",
+        )
+        llm_key2 = st.text_input(
+            "AWS Secret Access Key",
+            value=os.getenv("AWS_SECRET_ACCESS_KEY", ""),
+            type="password",
+        )
         region_val = st.text_input("Region", value=os.getenv("AWS_REGION", "us-east-1"))
 
-    model = st.text_input("Model", value=os.getenv("LLM_MODEL", DEFAULT_MODELS[provider_label]))
+    model = st.text_input(
+        "Model", value=os.getenv("LLM_MODEL", DEFAULT_MODELS[provider_label])
+    )
 
     st.divider()
     st.markdown("### Memory storage")
@@ -389,33 +433,42 @@ with st.sidebar:
         (k for k, v in DB_BACKEND_ENV.items() if v == current_backend_env),
         "Memori Cloud",
     )
-    db_label = st.selectbox("Database", DB_BACKENDS, index=DB_BACKENDS.index(current_backend_label))
+    db_label = st.selectbox(
+        "Database", DB_BACKENDS, index=DB_BACKENDS.index(current_backend_label)
+    )
 
     db_conn_str_val = ""
     db_path_val = "memori.db"
 
     if db_label == "SQLite":
-        db_path_val = st.text_input("File path", value=os.getenv("DB_PATH", "memori.db"))
+        db_path_val = st.text_input(
+            "File path", value=os.getenv("DB_PATH", "memori.db")
+        )
     elif db_label != "Memori Cloud":
         db_conn_str_val = st.text_input(
             "Connection string",
             value=os.getenv("DB_CONNECTION_STRING", ""),
             type="password",
             placeholder={
-                "PostgreSQL":  "postgresql+psycopg://user:pass@host/db",
-                "MySQL":       "mysql+pymysql://user:pass@host/db",
-                "MariaDB":     "mysql+pymysql://user:pass@host/db",
-                "MongoDB":     "mongodb://localhost:27017/memori",
+                "PostgreSQL": "postgresql+psycopg://user:pass@host/db",
+                "MySQL": "mysql+pymysql://user:pass@host/db",
+                "MariaDB": "mysql+pymysql://user:pass@host/db",
+                "MongoDB": "mongodb://localhost:27017/memori",
                 "CockroachDB": "cockroachdb+psycopg2://user:pass@host:26257/db",
-                "TiDB":        "mysql+pymysql://user:pass@host:4000/db",
-                "OceanBase":   "mysql+pyobvector://user:pass@host:2881/db",
-                "Oracle":      "oracle+oracledb://user:pass@host:1521/service",
+                "TiDB": "mysql+pymysql://user:pass@host:4000/db",
+                "OceanBase": "mysql+pyobvector://user:pass@host:2881/db",
+                "Oracle": "oracle+oracledb://user:pass@host:1521/service",
             }.get(db_label, ""),
         )
 
     if st.button("Save settings", type="primary", use_container_width=True):
         apply_keys(
-            provider_label, memori_key, llm_key, llm_key2, model, region_val,
+            provider_label,
+            memori_key,
+            llm_key,
+            llm_key2,
+            model,
+            region_val,
             db_backend=DB_BACKEND_ENV[db_label],
             db_conn_str=db_conn_str_val,
             db_path=db_path_val,
@@ -425,7 +478,7 @@ with st.sidebar:
     st.divider()
     st.markdown("### Agents")
     selected_agents: list[str] = []
-    for name, _, emoji, color in PIPELINE:
+    for name, _, _emoji, _color in PIPELINE:
         if st.checkbox(name, value=True, key=f"chk_{name}"):
             selected_agents.append(name)
 
@@ -433,12 +486,15 @@ with st.sidebar:
     st.markdown("### Token savings")
     token_slot = st.empty()
     token_slot.markdown(
-        _token_savings_html(st.session_state.tokens_actual, st.session_state.tokens_naive),
+        _token_savings_html(
+            st.session_state.tokens_actual, st.session_state.tokens_naive
+        ),
         unsafe_allow_html=True,
     )
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <div style="margin-bottom:2rem;">
     <h1 style="margin:0 0 6px;font-size:1.85rem;font-weight:700;color:#0B0C0D;letter-spacing:-0.025em;">
         Persistent Memory Dev Agent
@@ -447,13 +503,18 @@ st.markdown("""
         Four specialized agents · branch-scoped memory · zero manual context
     </p>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Task input ────────────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <p style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;
            text-transform:uppercase;color:#5b20e0;margin-bottom:6px;">Task</p>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # Apply any pending example selection before the widget renders — must happen
 # before key="task_area" is instantiated or Streamlit raises StreamlitAPIException
@@ -470,13 +531,19 @@ task = st.text_area(
 
 col_btn, col_pills, _ = st.columns([1, 3, 2])
 with col_btn:
-    run_btn = st.button("Run Agents", type="primary", disabled=not task.strip(), use_container_width=True)
+    run_btn = st.button(
+        "Run Agents",
+        type="primary",
+        disabled=not task.strip(),
+        use_container_width=True,
+    )
 with col_pills:
     if selected_agents:
         pills_html = "".join(
             f'<span style="font-size:0.83rem;color:{c};background:{c}15;'
             f'padding:2px 9px;border-radius:100px;font-weight:500;white-space:nowrap;">{e} {n}</span> '
-            for n, _, e, c in PIPELINE if n in selected_agents
+            for n, _, e, c in PIPELINE
+            if n in selected_agents
         )
         st.markdown(
             f'<div style="display:flex;align-items:center;gap:5px;height:38px;flex-wrap:wrap;">{pills_html}</div>',
@@ -484,10 +551,13 @@ with col_pills:
         )
 
 # ── Example prompts ───────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <p style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;
            text-transform:uppercase;color:#5b20e0;margin:1.4rem 0 0.5rem;">Try an example</p>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 eg_cols = st.columns(3)
 for i, prompt in enumerate(EXAMPLE_PROMPTS):
     if eg_cols[i % 3].button(prompt, key=f"eg_{i}", use_container_width=True):
@@ -495,7 +565,8 @@ for i, prompt in enumerate(EXAMPLE_PROMPTS):
         st.rerun()
 
 # ── Token savings teaser ──────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(
+    """
 <div style="margin:1.4rem 0 0;background:#faf9ff;border:1.5px solid #ede9fe;
             border-radius:12px;padding:16px 20px;">
   <div style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;
@@ -521,7 +592,9 @@ st.markdown("""
     counter in the sidebar update in real time.
   </div>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Pipeline diagram (shown before first run) ─────────────────────────────────
 if st.session_state.tokens_actual == 0:
@@ -533,14 +606,15 @@ if st.session_state.tokens_actual == 0:
             f'<div style="font-size:1.3rem;line-height:1;margin-bottom:7px;">{emoji}</div>'
             f'<div style="font-weight:700;font-size:0.86rem;color:#0B0C0D;">{name}</div>'
             f'<div style="font-size:0.83rem;color:#656565;margin-top:4px;line-height:1.4;">'
-            f'{AGENT_DESCRIPTIONS[name]}</div></div>'
+            f"{AGENT_DESCRIPTIONS[name]}</div></div>"
         )
         if idx < len(PIPELINE) - 1:
             agent_cards_html += (
                 '<div style="display:flex;align-items:center;padding:0 6px;'
                 'color:#c4b5fd;font-size:1.1rem;flex-shrink:0;margin-top:-10px;">→</div>'
             )
-    st.markdown(f"""
+    st.markdown(
+        f"""
 <div style="margin:2.2rem 0 0.5rem;">
   <p style="font-size:0.83rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
             color:#5b20e0;margin-bottom:0.9rem;">How it works</p>
@@ -550,7 +624,9 @@ if st.session_state.tokens_actual == 0:
     — decisions, findings, and patterns persist across sessions automatically.
   </div>
 </div>
-""", unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
 
 # ── Swarm execution ───────────────────────────────────────────────────────────
 if run_btn and task.strip():
@@ -568,8 +644,8 @@ if run_btn and task.strip():
 
     for name, agent_cls, emoji, color in active:
         slots[name].markdown(
-            f'<div style="border:1.5px solid #ede9fe;border-radius:10px;background:#fff;'
-            f'box-shadow:0 2px 8px rgba(113,47,255,0.05);margin-bottom:10px;">'
+            '<div style="border:1.5px solid #ede9fe;border-radius:10px;background:#fff;'
+            'box-shadow:0 2px 8px rgba(113,47,255,0.05);margin-bottom:10px;">'
             + agent_header_html(name, emoji, color, thinking=True)
             + '<p style="color:#6d28d9;font-size:0.85rem;font-style:italic;padding-bottom:12px;">Running…</p>'
             + "</div></div>",
@@ -583,7 +659,7 @@ if run_btn and task.strip():
             prior_output = output
         except Exception as e:
             slots[name].markdown(
-                f'<div style="border:1.5px solid #fee2e2;border-radius:10px;background:#fff;margin-bottom:10px;">'
+                '<div style="border:1.5px solid #fee2e2;border-radius:10px;background:#fff;margin-bottom:10px;">'
                 + agent_header_html(name, emoji, "#ff3f16")
                 + f'<p style="color:#ff3f16;font-size:0.85rem;">{e}</p>'
                 + "</div></div>",
@@ -593,8 +669,8 @@ if run_btn and task.strip():
 
         with slots[name].container():
             st.markdown(
-                f'<div style="border:1.5px solid #ede9fe;border-radius:10px;background:#fff;'
-                f'box-shadow:0 2px 8px rgba(113,47,255,0.05);margin-bottom:10px;overflow:hidden;">'
+                '<div style="border:1.5px solid #ede9fe;border-radius:10px;background:#fff;'
+                'box-shadow:0 2px 8px rgba(113,47,255,0.05);margin-bottom:10px;overflow:hidden;">'
                 + agent_header_html(name, emoji, color)
                 + "</div></div>",
                 unsafe_allow_html=True,
@@ -605,20 +681,28 @@ if run_btn and task.strip():
         # Update token savings after each agent and push to the sidebar immediately.
         agent_tokens = agent.last_prompt_tokens
         prior_chars = st.session_state.accumulated_output_chars
-        naive_tokens = agent_tokens + prior_chars // 4  # prior context we didn't re-send
+        naive_tokens = (
+            agent_tokens + prior_chars // 4
+        )  # prior context we didn't re-send
         st.session_state.tokens_actual += agent_tokens
         st.session_state.tokens_naive += max(naive_tokens, agent_tokens)
         st.session_state.accumulated_output_chars += len(output)
         token_slot.markdown(
-            _token_savings_html(st.session_state.tokens_actual, st.session_state.tokens_naive),
+            _token_savings_html(
+                st.session_state.tokens_actual, st.session_state.tokens_naive
+            ),
             unsafe_allow_html=True,
         )
 
     if results:
         st.markdown("<div style='height:0.25rem'></div>", unsafe_allow_html=True)
-        st.success("Done — context saved to Memori. Your next session picks up exactly here.")
+        st.success(
+            "Done — context saved to Memori. Your next session picks up exactly here."
+        )
         with st.expander("Export results"):
-            full_md = "\n\n---\n\n".join(f"## {n}\n\n{out}" for n, out in results.items())
+            full_md = "\n\n---\n\n".join(
+                f"## {n}\n\n{out}" for n, out in results.items()
+            )
             st.download_button(
                 "⬇  Download Markdown",
                 data=full_md,

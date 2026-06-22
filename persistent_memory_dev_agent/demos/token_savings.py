@@ -365,6 +365,7 @@ SYSTEM_PROMPT_BASE = "You are a senior engineer helping with an auth module refa
 # Token counting — use tiktoken when available, fall back to word estimate
 # ---------------------------------------------------------------------------
 
+
 def _make_counter():
     try:
         import tiktoken  # type: ignore[import]
@@ -417,7 +418,11 @@ def simulate_before() -> list[SessionResult]:
         f"USER: {CURRENT_TASK}\n"
     )
     results.append(
-        {"session": len(SESSION_HISTORY) + 1, "label": CURRENT_TASK[:55], "tokens": count_tokens(prompt)}
+        {
+            "session": len(SESSION_HISTORY) + 1,
+            "label": CURRENT_TASK[:55],
+            "tokens": count_tokens(prompt),
+        }
     )
     return results
 
@@ -455,6 +460,7 @@ def simulate_after() -> list[SessionResult]:
 # Display
 # ---------------------------------------------------------------------------
 
+
 def run_demo() -> None:
     console.print()
     console.print(
@@ -480,7 +486,7 @@ def run_demo() -> None:
     total_before = 0
     total_after = 0
 
-    for b, a in zip(before, after):
+    for b, a in zip(before, after, strict=True):
         saved_pct = int((b["tokens"] - a["tokens"]) / b["tokens"] * 100)
         table.add_row(
             str(b["session"]),

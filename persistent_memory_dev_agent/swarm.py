@@ -13,7 +13,12 @@ from agents.coder import CoderAgent
 from agents.docs import DocsAgent
 from agents.reviewer import ReviewerAgent
 from agents.tester import TesterAgent
-from core.git_context import get_changed_files, get_context_id, get_current_branch, get_recent_commits
+from core.git_context import (
+    get_changed_files,
+    get_context_id,
+    get_current_branch,
+    get_recent_commits,
+)
 
 console = Console()
 logger = logging.getLogger(__name__)
@@ -60,7 +65,11 @@ def run_swarm(
             )
 
         console.print(
-            Panel(output, title=f"[bold {color}][{name}][/bold {color}]", border_style=color)
+            Panel(
+                output,
+                title=f"[bold {color}][{name}][/bold {color}]",
+                border_style=color,
+            )
         )
         results[name] = output
         prior_output = output
