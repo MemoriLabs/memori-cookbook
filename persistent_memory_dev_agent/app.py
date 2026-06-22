@@ -228,15 +228,15 @@ PROVIDERS = ["Gemini", "OpenAI", "Anthropic", "AWS Bedrock"]
 
 DB_BACKENDS = [
     "Memori Cloud",
-    "SQLite",
-    "PostgreSQL",
-    "MySQL",
+    "CockroachDB",
     "MariaDB",
     "MongoDB",
-    "CockroachDB",
-    "TiDB",
+    "MySQL",
     "OceanBase",
     "Oracle",
+    "PostgreSQL",
+    "SQLite",
+    "TiDB",
 ]
 
 DB_BACKEND_ENV = {
