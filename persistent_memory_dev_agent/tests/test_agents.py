@@ -83,9 +83,9 @@ def test_token_savings_demo_runs():
     assert len(before) == len(after)
     for b, a in zip(before, after, strict=True):
         # Memori approach must always use fewer tokens
-        assert a["tokens"] < b["tokens"], (
-            f"Session {b['session']}: after ({a['tokens']}) should be < before ({b['tokens']})"
-        )
+        assert (
+            a["tokens"] < b["tokens"]
+        ), f"Session {b['session']}: after ({a['tokens']}) should be < before ({b['tokens']})"
 
 
 @pytest.mark.integration
@@ -117,7 +117,7 @@ def test_memori_attribution_is_called_on_real_client():
 
     # Memori returns a handle for attribution; the original client is what agents
     # use for API calls — verify registration doesn't break it
-    assert hasattr(client, "chat"), (
-        "OpenAI client must still expose .chat after Memori registration"
-    )
+    assert hasattr(
+        client, "chat"
+    ), "OpenAI client must still expose .chat after Memori registration"
     assert callable(client.chat.completions.create)
