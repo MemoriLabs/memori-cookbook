@@ -1,0 +1,4 @@
+crewai
+memori
+openai
+python-dotenv
