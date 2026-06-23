@@ -6,6 +6,7 @@ Stores problem attempts, bookmarks, study plans, and analytics data.
 import json
 import os
 from datetime import datetime, timedelta, timezone
+from typing import cast
 
 from sqlalchemy import (
     Column,
@@ -219,7 +220,7 @@ def calculate_next_review(attempt: ProblemAttempt, was_correct: bool) -> datetim
     attempt.ease_factor = new_ease
     attempt.next_review_at = datetime.now(timezone.utc) + timedelta(days=new_interval)
 
-    return attempt.next_review_at
+    return cast(datetime, attempt.next_review_at)
 
 
 def get_due_problems(

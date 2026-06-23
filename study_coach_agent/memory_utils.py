@@ -97,7 +97,8 @@ class MemoriManager:
         client = OpenAI(api_key=openai_key)
         mem = Memori(conn=conn_arg).openai.register(client)
         mem.attribution(entity_id=self.entity_id, process_id=self.process_id)
-        mem.config.storage.build()
+        if mem.config.storage is not None:
+            mem.config.storage.build()
 
         self.memori: Memori = mem
         self.openai_client = client
@@ -192,7 +193,7 @@ class MemoriManager:
                 {"role": "user", "content": question},
             ],
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or ""
 
     def get_latest_learner_profile(self) -> dict[str, Any] | None:
         """

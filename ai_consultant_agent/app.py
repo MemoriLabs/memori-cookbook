@@ -153,7 +153,8 @@ if "openai_client" not in st.session_state:
             mem = Memori(conn=SessionLocal).openai.register(client)
             # Basic attribution so Memori can attach memories
             mem.attribution(entity_id="ai-consultant-user", process_id="ai-consultant")
-            mem.config.storage.build()
+            if mem.config.storage is not None:
+                mem.config.storage.build()
 
             st.session_state.memori = mem
             st.session_state.openai_client = client
