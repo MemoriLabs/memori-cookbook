@@ -1,0 +1,45 @@
+[project]
+name = "persistent-memory-dev-agent"
+version = "0.1.0"
+description = "Persistent Memory Dev Agent — four specialized agents sharing branch-scoped memory via Memori"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.107.0",
+    "click>=8.1.0",
+    "memori",
+    "openai>=1.59.5",
+    "pydantic-settings>=2.12.0",
+    "python-dotenv>=1.0.1",
+    "rich>=13.0.0",
+    "streamlit>=1.40.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.8.0",
+]
+token-demo = [
+    "tiktoken>=0.7.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v", "--tb=short"]
+markers = [
+    "integration: tests that require real API keys (MEMORI_API_KEY, provider key)",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "C4", "UP"]
+ignore = ["E501"]
