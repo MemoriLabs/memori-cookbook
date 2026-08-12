@@ -27,6 +27,7 @@ htmlcov/
 venv/
 env/
 .venv/
+*venv/
 
 # Environment variables
 .env

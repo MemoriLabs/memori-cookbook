@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=60", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contributor-assistant-cli"
+version = "0.1.0"
+description = "CLI assistant for Memori contributors with multi-LLM support"
+authors = [{name = "Memori Labs Community", email = "noc@memorilabs.ai"}]
+license = {text = "Apache-2.0"}
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["ai", "memori", "cli", "assistant", "llm"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "memori>=3.1.0",
+    "openai>=2.6.1",
+    "anthropic>=0.71.0",
+    "google-generativeai>=0.3.0",
+    "sqlalchemy>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-mock>=3.15.0",
+]
+
+[project.scripts]
+contributor-assistant = "contributor_assistant_cli.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.urls]
+Homepage = "https://memorilabs.ai"
+Documentation = "https://memorilabs.ai/docs/"
+Repository = "https://github.com/MemoriLabs/memori-cookbook"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
