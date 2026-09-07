@@ -1,5 +1,5 @@
 # Contributing to Memori Cookbook
-
+Mahir Sayyed willing to contribute.
 Thank you for your interest in contributing to the Memori Cookbook!
 
 ## Development Setup
